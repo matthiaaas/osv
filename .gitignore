@@ -1,0 +1,12 @@
+# V source
+/v
+
+# Virtual environments
+.venv
+
+# Build artifacts
+kernel/kernel.elf
+riscv/target
+
+# macOS
+.DS_Store

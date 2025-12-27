@@ -1,0 +1,14 @@
+pub const OP_IMM: u8 = 0x13;
+pub const OP_REG: u8 = 0x33;
+pub const LUI: u8 = 0x37;
+pub const AUIPC: u8 = 0x17;
+pub const JAL: u8 = 0x6f;
+pub const JALR: u8 = 0x67;
+pub const BRANCH: u8 = 0x63;
+pub const LOAD: u8 = 0x03;
+pub const STORE: u8 = 0x23;
+pub const MISC_MEM: u8 = 0x0f;
+pub const SYSTEM: u8 = 0x73;
+pub const FENCE: u8 = 0x0f;
+pub const FENCE_I: u8 = 0x0f;
+pub const ECALL: u32 = 0x00000073;
