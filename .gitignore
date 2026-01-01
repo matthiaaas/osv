@@ -6,6 +6,8 @@
 
 # Build artifacts
 kernel/kernel.elf
+kernel/kernel.c
+kernel/target
 riscv/target
 
 # macOS

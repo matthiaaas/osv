@@ -7,17 +7,19 @@ pub struct Dram {
 impl Dram {
     pub fn new(size: u32) -> Self {
         Self {
-            mem: vec![0; size as usize],
+            mem: vec![0; size as usize], // TODO: btreemap
         }
     }
 
-    pub fn flash(&mut self, data: &[u8], offset: usize) -> Result<(), ()> {
-        let end = offset + data.len();
+    pub fn flash(&mut self, addr: u32, data: &[u8]) -> Result<(), ()> {
+        let start = addr as usize;
+        let end = start + data.len();
+
         if end > self.mem.len() {
             return Err(());
         }
 
-        self.mem[offset..end].copy_from_slice(data);
+        self.mem[start..end].copy_from_slice(data);
         Ok(())
     }
 }
@@ -28,21 +30,37 @@ impl Device for Dram {
     }
 
     fn load(&mut self, addr: u32, size: u8) -> Result<u32, BusError> {
-        assert!((addr as usize) + (size as usize) <= self.mem.len());
+        let start = addr as usize;
+        let len = size as usize;
 
-        let mut val: u32 = 0;
-        for i in 0..size {
-            val |= (self.mem[(addr as usize) + (i as usize)] as u32) << (i * 8);
+        if start + len > self.mem.len() {
+            return Err(BusError::LoadAccessFault(addr));
         }
+
+        let slice = &self.mem[start..start + len];
+
+        let val = match len {
+            1 => slice[0] as u32,
+            2 => u16::from_le_bytes(slice.try_into().unwrap()) as u32,
+            4 => u32::from_le_bytes(slice.try_into().unwrap()),
+            _ => return Err(BusError::LoadAccessFault(addr)),
+        };
+
         Ok(val)
     }
 
     fn store(&mut self, addr: u32, size: u8, val: u32) -> Result<(), BusError> {
-        assert!((addr as usize) + (size as usize) <= self.mem.len());
+        let start = addr as usize;
+        let len = size as usize;
 
-        for i in 0..size {
-            self.mem[(addr as usize) + (i as usize)] = ((val >> (i * 8)) & 0xFF) as u8;
+        if start + len > self.mem.len() {
+            return Err(BusError::StoreAccessFault(addr));
         }
+
+        let bytes = val.to_le_bytes();
+
+        self.mem[start..start + len].copy_from_slice(&bytes[0..len]);
+
         Ok(())
     }
 

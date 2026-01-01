@@ -35,6 +35,18 @@ impl Instr {
     pub fn as_i_type(&self) -> IType {
         IType(*self)
     }
+
+    pub fn as_r_type(&self) -> RType {
+        RType(*self)
+    }
+
+    pub fn as_u_type(&self) -> UType {
+        UType(*self)
+    }
+
+    pub fn as_j_type(&self) -> JType {
+        JType(*self)
+    }
 }
 
 impl From<u32> for Instr {

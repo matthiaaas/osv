@@ -1,8 +1,9 @@
 use crate::bus::Bus;
-use crate::instructions::rv32i;
-use crate::isa::opcodes::OP_IMM;
+use crate::csrs::CsrFile;
+use crate::instructions::{privileged, rv32i, zicsr};
+use crate::isa::opcodes::{AUIPC, JAL, JALR, OP_IMM, OP_REG, SYSTEM};
 use crate::isa::{INSTRUCTION_SIZE, Instr, PrivilegeMode};
-use crate::registers::RegFile;
+use crate::regs::RegFile;
 use crate::trap::Trap;
 
 const DEFAULT_RESET_VECTOR: u32 = 0x8000_0000;
@@ -11,6 +12,7 @@ pub struct Cpu {
     pub pc: u32,
     pub next_pc: u32,
     pub reg_file: RegFile,
+    pub csr_file: CsrFile,
     pub bus: Bus,
     pub priv_mode: PrivilegeMode,
     pub cycle: u64,
@@ -23,7 +25,8 @@ impl Cpu {
         Self {
             pc: reset_vector,
             next_pc: reset_vector,
-            reg_file: RegFile::new(),
+            reg_file: RegFile::default(),
+            csr_file: CsrFile::default(),
             bus,
             priv_mode: PrivilegeMode::Machine,
             cycle: 0,
@@ -40,6 +43,17 @@ impl Cpu {
     pub fn execute(&mut self, instr: Instr) -> Result<(), Trap> {
         match instr.opcode() {
             OP_IMM => rv32i::exec_op_imm(self, instr),
+            OP_REG => rv32i::exec_op_reg(self, instr),
+            AUIPC => rv32i::exec_auipc(self, instr),
+            JAL => rv32i::exec_jal(self, instr),
+            JALR => rv32i::exec_jalr(self, instr),
+            SYSTEM => {
+                if privileged::is_privileged(instr) {
+                    privileged::exec_privileged(self, instr)
+                } else {
+                    zicsr::exec_csr(self, instr)
+                }
+            }
             _ => Err(Trap::IllegalInstruction(instr)),
         }
     }

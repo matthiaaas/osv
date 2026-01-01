@@ -9,3 +9,15 @@ fn main() {
     for {}
 }
 
+// module main
+
+// import riscv
+
+// fn main() {
+//     // addi := riscv.isa.Instr.from(0x00500093)
+// 	// assert addi.opcode() == 0x13
+
+// 	cpu := riscv.Cpu.new()
+
+//     println("Hello World")
+// }

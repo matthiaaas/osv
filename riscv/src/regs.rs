@@ -24,6 +24,12 @@ impl RegFile {
     }
 }
 
+impl Default for RegFile {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl fmt::Debug for RegFile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let non_zero: Vec<_> = self

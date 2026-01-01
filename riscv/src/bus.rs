@@ -11,6 +11,13 @@ pub trait Device {
 
     fn store(&mut self, addr: u32, size: u8, val: u32) -> Result<(), BusError>;
 
+    fn write_bytes(&mut self, addr: u32, data: &[u8]) -> Result<(), BusError> {
+        for (i, byte) in data.iter().enumerate() {
+            self.store(addr + (i as u32), 1, *byte as u32)?;
+        }
+        Ok(())
+    }
+
     fn size(&self) -> u32;
 }
 
@@ -48,9 +55,16 @@ impl Bus {
         }
     }
 
+    pub fn write_bytes(&mut self, addr: u32, data: &[u8]) -> Result<(), BusError> {
+        match self.probe(addr) {
+            Ok(mapping) => mapping.device.write_bytes(addr - mapping.base_addr, data),
+            Err(()) => Err(BusError::StoreAccessFault(addr)),
+        }
+    }
+
     fn probe(&mut self, addr: u32) -> Result<&mut MappedDevice, ()> {
         for mapping in &mut self.mappings {
-            if addr >= mapping.base_addr && addr <= mapping.base_addr + mapping.device.size() {
+            if addr >= mapping.base_addr && addr < mapping.base_addr + mapping.device.size() {
                 return Ok(mapping);
             }
         }
