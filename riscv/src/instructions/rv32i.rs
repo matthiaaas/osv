@@ -9,7 +9,7 @@ pub fn exec_op_imm(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
             let rd = i.rd();
             let rs1 = i.rs1();
             let imm = i.imm();
-            let res = (cpu.reg_file.read(rs1) as i32) + imm;
+            let res = (cpu.reg_file.read(rs1) as i32).wrapping_add(imm);
             cpu.reg_file.write(rd, res as u32);
             Ok(())
         }
@@ -32,6 +32,12 @@ pub fn exec_op_reg(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
         }
         _ => Err(Trap::IllegalInstruction(instr)),
     }
+}
+
+pub fn exec_lui(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
+    let u = instr.as_u_type();
+    cpu.reg_file.write(u.rd(), u.imm() as u32);
+    Ok(())
 }
 
 pub fn exec_auipc(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
@@ -76,4 +82,19 @@ pub fn exec_jalr(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
     cpu.next_pc = target_addr;
 
     Ok(())
+}
+
+pub fn exec_store(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
+    let s = instr.as_s_type();
+
+    match instr.funct3() {
+        0b010 => {
+            // SW
+            let addr = cpu.reg_file.read(s.rs1()).wrapping_add(s.imm() as u32);
+            let data = cpu.reg_file.read(s.rs2());
+            cpu.bus.store(addr, 4, data)?;
+            Ok(())
+        }
+        _ => Err(Trap::IllegalInstruction(instr)),
+    }
 }

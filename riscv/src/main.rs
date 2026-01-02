@@ -50,6 +50,7 @@ fn main() {
     // ];
     // ram.flash(0x0, &program).expect("RAM too sparse");
     load_elf_into_ram(
+        "/Users/matthias/Documents/private/projects/osv/kernel/target/kernel.elf",
         &mut ram,
         0x8000_0000,
     )
@@ -61,8 +62,8 @@ fn main() {
 
     let mut cpu = Cpu::new(bus, None);
 
-    while cpu.cycle < 10 {
+    while cpu.cycles() < 1000 {
         cpu.step();
-        println!("{:?}", cpu.reg_file);
+        // println!("{:#010x} {:?}", cpu.pc, cpu.reg_file);
     }
 }

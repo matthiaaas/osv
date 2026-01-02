@@ -16,6 +16,7 @@ VFLAGS = -arch rv32 \
 	-d no_bool \
 	-gc none \
 	-cc $(CC)
+VSOURCES := $(wildcard *.v)
 
 ASM = nasm
 
@@ -30,16 +31,13 @@ all: $(BUILD_DIR)/kernel.elf
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
-$(BUILD_DIR)/kernel.c: kernel.v | $(BUILD_DIR)
-	$(V) $(VFLAGS) -o $@ $<
+$(BUILD_DIR)/kernel.c: $(VSOURCES) | $(BUILD_DIR)
+	$(V) $(VFLAGS) -o $@ .
 
-$(BUILD_DIR)/trap.c: trap.v | $(BUILD_DIR)
-	$(V) $(VFLAGS) -o $@ $<
-
-$(BUILD_DIR)/kernel.elf: start.s kernel.ld $(BUILD_DIR)/kernel.c $(BUILD_DIR)/trap.c | $(BUILD_DIR)
+$(BUILD_DIR)/kernel.elf: start.s kernel.ld $(BUILD_DIR)/kernel.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) \
 		-o $@ \
-		start.s $(BUILD_DIR)/kernel.c $(BUILD_DIR)/trap.c
+		start.s $(BUILD_DIR)/kernel.c
 
 readelf: $(BUILD_DIR)/kernel.elf
 	$(READELF) -a $<

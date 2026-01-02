@@ -92,3 +92,34 @@ impl UType {
         (raw & 0xfffff000) as i32
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct SType(pub(super) Instr);
+
+impl SType {
+    #[inline(always)]
+    pub fn rs1(&self) -> u8 {
+        let raw = (self.0).0;
+        ((raw >> 15) & 0x1f) as u8
+    }
+
+    #[inline(always)]
+    pub fn rs2(&self) -> u8 {
+        let raw = (self.0).0;
+        ((raw >> 20) & 0x1f) as u8
+    }
+
+    #[inline(always)]
+    pub fn imm(&self) -> i32 {
+        let raw = (self.0).0;
+
+        let imm_4_0 = (raw >> 7) & 0x1f;
+        let imm_11_5 = (raw >> 25) & 0x7f;
+
+        let imm = (imm_11_5 << 5) | imm_4_0;
+
+        // sextend
+        ((imm as i32) << 12) >> 20
+    }
+}

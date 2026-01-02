@@ -18,18 +18,23 @@ impl Instr {
     }
 
     #[inline(always)]
+    pub fn word(&self) -> u32 {
+        self.0
+    }
+
+    #[inline(always)]
     pub fn opcode(&self) -> u8 {
-        (self.0 & 0x7F) as u8
+        (self.word() & 0x7F) as u8
     }
 
     #[inline(always)]
     pub fn funct3(&self) -> u8 {
-        ((self.0 >> 12) & 0x07) as u8
+        ((self.word() >> 12) & 0x07) as u8
     }
 
     #[inline(always)]
     pub fn funct7(&self) -> u8 {
-        ((self.0 >> 25) & 0x7F) as u8
+        ((self.word() >> 25) & 0x7F) as u8
     }
 
     pub fn as_i_type(&self) -> IType {
@@ -46,6 +51,10 @@ impl Instr {
 
     pub fn as_j_type(&self) -> JType {
         JType(*self)
+    }
+
+    pub fn as_s_type(&self) -> SType {
+        SType(*self)
     }
 }
 

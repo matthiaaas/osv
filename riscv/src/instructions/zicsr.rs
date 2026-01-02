@@ -8,14 +8,19 @@ pub fn exec_csr(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
     let funct3 = instr.funct3();
 
     match funct3 {
-        // 0b001 => {
-        //     // CSRRW
-        //     let csr_val = cpu.csr_file.read(csr_addr)?;
-        //     let rs1_val = cpu.reg_file.read(rs1);
-        //     cpu.csr_file.write(csr_addr, rs1_val)?;
-        //     cpu.reg_file.write(rd, csr_val);
-        //     Ok(())
-        // }
+        0b001 => {
+            // CSRRW
+            let csr_val = cpu
+                .csr_file
+                .read(csr_addr)
+                .map_err(|_| Trap::IllegalInstruction(instr))?;
+            let rs1_val = cpu.reg_file.read(rs1);
+            cpu.csr_file
+                .write(csr_addr, rs1_val)
+                .map_err(|_| Trap::IllegalInstruction(instr))?;
+            cpu.reg_file.write(rd, csr_val);
+            Ok(())
+        }
         // 0b010 => {
         //     // CSRRS
         //     let csr_val = cpu.csr_file.read(csr_addr)?;

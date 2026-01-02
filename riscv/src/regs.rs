@@ -2,6 +2,12 @@ use std::fmt;
 
 const NUM_REGS: usize = 32;
 
+const ABI_REG_NAMES: [&str; NUM_REGS] = [
+    "zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2", "s0", "s1", "a0", "a1", "a2", "a3", "a4",
+    "a5", "a6", "a7", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10", "s11", "t3", "t4",
+    "t5", "t6",
+];
+
 pub struct RegFile {
     regs: [u32; NUM_REGS],
 }
@@ -32,13 +38,15 @@ impl Default for RegFile {
 
 impl fmt::Debug for RegFile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let non_zero: Vec<_> = self
-            .regs
-            .iter()
-            .enumerate()
-            .filter(|(_, val)| **val != 0)
-            .map(|(i, val)| format!("x{:02}:0x{:08x}", i, val))
-            .collect();
-        write!(f, "{}", non_zero.join(" "))
+        let mut ds = f.debug_struct("RegFile");
+        for (i, &reg) in self.regs.iter().enumerate() {
+            if reg != 0 {
+                ds.field(
+                    &format!("x{}({})", i, ABI_REG_NAMES[i]),
+                    &format_args!("{:#010x}", reg),
+                );
+            }
+        }
+        ds.finish()
     }
 }

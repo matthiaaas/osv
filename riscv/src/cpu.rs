@@ -1,7 +1,7 @@
 use crate::bus::Bus;
 use crate::csrs::CsrFile;
 use crate::instructions::{privileged, rv32i, zicsr};
-use crate::isa::opcodes::{AUIPC, JAL, JALR, OP_IMM, OP_REG, SYSTEM};
+use crate::isa::opcodes::{AUIPC, JAL, JALR, LUI, OP_IMM, OP_REG, STORE, SYSTEM};
 use crate::isa::{INSTRUCTION_SIZE, Instr, PrivilegeMode};
 use crate::regs::RegFile;
 use crate::trap::Trap;
@@ -15,7 +15,6 @@ pub struct Cpu {
     pub csr_file: CsrFile,
     pub bus: Bus,
     pub priv_mode: PrivilegeMode,
-    pub cycle: u64,
 }
 
 impl Cpu {
@@ -29,7 +28,6 @@ impl Cpu {
             csr_file: CsrFile::default(),
             bus,
             priv_mode: PrivilegeMode::Machine,
-            cycle: 0,
         }
     }
 
@@ -44,9 +42,11 @@ impl Cpu {
         match instr.opcode() {
             OP_IMM => rv32i::exec_op_imm(self, instr),
             OP_REG => rv32i::exec_op_reg(self, instr),
+            LUI => rv32i::exec_lui(self, instr),
             AUIPC => rv32i::exec_auipc(self, instr),
             JAL => rv32i::exec_jal(self, instr),
             JALR => rv32i::exec_jalr(self, instr),
+            STORE => rv32i::exec_store(self, instr),
             SYSTEM => {
                 if privileged::is_privileged(instr) {
                     privileged::exec_privileged(self, instr)
@@ -61,10 +61,16 @@ impl Cpu {
     pub fn step(&mut self) {
         if let Err(trap) = self.try_step() {
             self.handle_trap(trap);
+        } else {
+            self.csr_file.increment_instret();
         }
 
         self.pc = self.next_pc;
-        self.cycle += 1;
+        self.csr_file.increment_cycle();
+    }
+
+    pub fn cycles(&self) -> u64 {
+        self.csr_file.get_cycle()
     }
 
     fn try_step(&mut self) -> Result<(), Trap> {
@@ -75,6 +81,15 @@ impl Cpu {
     }
 
     fn handle_trap(&mut self, trap: Trap) {
-        panic!("Trap handling not implemented: {:?}", trap);
+        println!("Trap occurred: {:?} at PC={:#010x}", trap, self.pc);
+
+        self.csr_file.set_exception_pc(self.pc);
+        self.csr_file.set_cause(trap.cause_code() as u32);
+        self.csr_file.set_mtval(trap.value());
+        self.csr_file.enter_exception_mode();
+
+        self.priv_mode = PrivilegeMode::Machine;
+
+        self.next_pc = self.csr_file.get_mtvec();
     }
 }
