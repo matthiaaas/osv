@@ -123,3 +123,36 @@ impl SType {
         ((imm as i32) << 12) >> 20
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct BType(pub(super) Instr);
+
+impl BType {
+    #[inline(always)]
+    pub fn rs1(&self) -> u8 {
+        let raw = (self.0).0;
+        ((raw >> 15) & 0x1f) as u8
+    }
+
+    #[inline(always)]
+    pub fn rs2(&self) -> u8 {
+        let raw = (self.0).0;
+        ((raw >> 20) & 0x1f) as u8
+    }
+
+    #[inline(always)]
+    pub fn imm(&self) -> i32 {
+        let raw = (self.0).0;
+
+        let imm_12 = ((raw >> 31) & 0x1) << 12;
+        let imm_10_5 = ((raw >> 25) & 0x3f) << 5;
+        let imm_4_1 = ((raw >> 8) & 0xf) << 1;
+        let imm_11 = ((raw >> 7) & 0x1) << 11;
+
+        let imm = (imm_12 | imm_11 | imm_10_5 | imm_4_1) as i32;
+
+        // sextend
+        (imm << 19) >> 19
+    }
+}

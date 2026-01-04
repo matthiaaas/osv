@@ -1,7 +1,7 @@
 use crate::bus::Bus;
 use crate::csrs::CsrFile;
 use crate::instructions::{privileged, rv32i, zicsr};
-use crate::isa::opcodes::{AUIPC, JAL, JALR, LUI, OP_IMM, OP_REG, STORE, SYSTEM};
+use crate::isa::opcodes::{AUIPC, BRANCH, JAL, JALR, LOAD, LUI, OP_IMM, OP_REG, STORE, SYSTEM};
 use crate::isa::{INSTRUCTION_SIZE, Instr, PrivilegeMode};
 use crate::regs::RegFile;
 use crate::trap::Trap;
@@ -46,6 +46,8 @@ impl Cpu {
             AUIPC => rv32i::exec_auipc(self, instr),
             JAL => rv32i::exec_jal(self, instr),
             JALR => rv32i::exec_jalr(self, instr),
+            BRANCH => rv32i::exec_branch(self, instr),
+            LOAD => rv32i::exec_load(self, instr),
             STORE => rv32i::exec_store(self, instr),
             SYSTEM => {
                 if privileged::is_privileged(instr) {

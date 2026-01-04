@@ -56,6 +56,10 @@ impl Instr {
     pub fn as_s_type(&self) -> SType {
         SType(*self)
     }
+
+    pub fn as_b_type(&self) -> BType {
+        BType(*self)
+    }
 }
 
 impl From<u32> for Instr {

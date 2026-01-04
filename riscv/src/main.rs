@@ -4,6 +4,7 @@ mod csrs;
 mod dram;
 mod instructions;
 mod isa;
+mod profiling;
 mod regs;
 mod trap;
 mod uart;
@@ -12,10 +13,11 @@ use goblin::elf::{self, program_header};
 use std::fs;
 use std::path::Path;
 
-use bus::Bus;
-use cpu::Cpu;
-use dram::Dram;
-use uart::Uart;
+use crate::bus::Bus;
+use crate::cpu::Cpu;
+use crate::dram::Dram;
+use crate::profiling::IpsMonitor;
+use crate::uart::Uart;
 
 fn load_elf_into_ram(filename: &str, ram: &mut Dram, base_addr: u32) -> Result<(), String> {
     let filepath = Path::new(filename);
@@ -62,8 +64,10 @@ fn main() {
 
     let mut cpu = Cpu::new(bus, None);
 
-    while cpu.cycles() < 1000 {
+    let mut ips_monitor = IpsMonitor::new(cpu.cycles());
+    loop {
         cpu.step();
+        ips_monitor.update(cpu.cycles());
         // println!("{:#010x} {:?}", cpu.pc, cpu.reg_file);
     }
 }

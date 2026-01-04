@@ -16,10 +16,11 @@ fn kmain() {
 	Uart.put(100) // d
 	Uart.put(10)  // \n
 
+	Uart.puts("From V kernel!\n")
+
 	mut i := u8(0)
 	for {
 		i++
-		
 	}
 }
 
