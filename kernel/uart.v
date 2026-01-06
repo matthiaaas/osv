@@ -11,6 +11,6 @@ pub fn Uart.put(c u8) {
 
 pub fn Uart.puts(s string) {
 	for c in s {
-		Uart.put(83)
+		Uart.put(c)
 	}
 }

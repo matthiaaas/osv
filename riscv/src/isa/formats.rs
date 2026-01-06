@@ -120,7 +120,7 @@ impl SType {
         let imm = (imm_11_5 << 5) | imm_4_0;
 
         // sextend
-        ((imm as i32) << 12) >> 20
+        ((imm as i32) << 20) >> 20
     }
 }
 
