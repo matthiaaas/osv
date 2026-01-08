@@ -1,5 +1,7 @@
 use std::time::{Duration, Instant};
 
+const CYCLE_INTERVAL: u64 = 1_000_000;
+
 pub struct IpsMonitor {
     last_time: Instant,
     last_cycles: u64,
@@ -14,7 +16,7 @@ impl IpsMonitor {
     }
 
     pub fn update(&mut self, current_cycles: u64) {
-        if current_cycles % 1_000_000 != 0 {
+        if current_cycles % CYCLE_INTERVAL != 0 {
             return;
         }
 

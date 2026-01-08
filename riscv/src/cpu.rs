@@ -79,6 +79,9 @@ impl Cpu {
         let instr = self.fetch()?;
         self.next_pc = self.pc.wrapping_add(INSTRUCTION_SIZE as u32);
         self.execute(instr)?;
+        if self.cycles() == 1_000_001 {
+            return Err(Trap::IllegalInstruction(Instr::new(4)));
+        }
         Ok(())
     }
 

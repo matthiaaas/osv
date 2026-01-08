@@ -68,6 +68,5 @@ fn main() {
     loop {
         cpu.step();
         ips_monitor.update(cpu.cycles());
-        // println!("{:#010x} {:?}", cpu.pc, cpu.reg_file);
     }
 }

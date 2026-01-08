@@ -142,8 +142,24 @@ impl CsrFile {
         self.mtvec & !0b11
     }
 
+    pub fn get_mepc(&self) -> u32 {
+        self.mepc
+    }
+
     pub fn get_cycle(&self) -> u64 {
         self.mcycle
+    }
+
+    pub fn get_mie(&self) -> bool {
+        (self.mstatus & MSTATUS_MIE) != 0
+    }
+
+    pub fn get_mpie(&self) -> bool {
+        (self.mstatus & MSTATUS_MPIE) != 0
+    }
+
+    pub fn get_mpp(&self) -> u8 {
+        ((self.mstatus & MSTATUS_MPP) >> 11) as u8
     }
 
     pub fn increment_cycle(&mut self) {
@@ -155,17 +171,26 @@ impl CsrFile {
     }
 
     pub fn enter_exception_mode(&mut self) {
-        let mie = (self.mstatus & MSTATUS_MIE) != 0;
-
         self.mstatus &= !MSTATUS_MIE;
 
-        if mie {
+        if self.get_mie() {
             self.mstatus |= MSTATUS_MPIE;
         } else {
             self.mstatus &= !MSTATUS_MPIE;
         }
 
         self.mstatus |= MSTATUS_MPP;
+    }
+
+    pub fn return_from_exception_mode(&mut self) {
+        if self.get_mpie() {
+            self.mstatus |= MSTATUS_MIE;
+        } else {
+            self.mstatus &= !MSTATUS_MIE;
+        }
+
+        self.mstatus &= !MSTATUS_MPIE;
+        self.mstatus &= !MSTATUS_MPP;
     }
 }
 

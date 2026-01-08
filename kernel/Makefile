@@ -10,7 +10,8 @@ CFLAGS = \
 	-nostdlib \
 	-fno-builtin \
 	-Wno-int-to-pointer-cast \
-	-Wno-pointer-to-int-cast
+	-Wno-pointer-to-int-cast \
+	-Wno-discarded-qualifiers
 
 V ?= ../v/v
 VFLAGS = \
@@ -18,6 +19,7 @@ VFLAGS = \
 	-m32 \
 	-freestanding \
 	-bare-builtin-dir bare \
+	-enable-globals \
 	-nofloat \
 	-gc none \
 	-cc $(CC) \
@@ -45,7 +47,7 @@ VFLAGS = \
 #     -d no_backtrace \
 # 	-d no_bool \
 # 	-d no_main
-VSOURCES := $(wildcard *.v)
+VSOURCES := $(shell find . -name "*.v")
 
 ASM = nasm
 
@@ -61,6 +63,7 @@ all: $(BUILD_DIR)/kernel.elf
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
+	cp -r c/. $(BUILD_DIR)/
 
 $(BUILD_DIR)/kernel.c: $(VSOURCES) | $(BUILD_DIR)
 	$(V) $(VFLAGS) -o $@ .

@@ -111,7 +111,14 @@ pub fn exec_op_reg(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
         }
         0b011 => {
             // SLTU
-            todo!()
+            let rs1_val = cpu.reg_file.read(r.rs1());
+            let rs2_val = cpu.reg_file.read(r.rs2());
+            if rs1_val < rs2_val {
+                cpu.reg_file.write(r.rd(), 1);
+            } else {
+                cpu.reg_file.write(r.rd(), 0);
+            }
+            Ok(())
         }
         0b100 => {
             // XOR
@@ -123,7 +130,11 @@ pub fn exec_op_reg(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
             match instr.funct7() {
                 0x00 => {
                     // SRL
-                    todo!()
+                    let rs1_val = cpu.reg_file.read(r.rs1());
+                    let rs2_val = cpu.reg_file.read(r.rs2()) & 0x1f;
+                    let res = rs1_val >> rs2_val;
+                    cpu.reg_file.write(r.rd(), res);
+                    Ok(())
                 }
                 0x20 => {
                     // SRA^

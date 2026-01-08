@@ -3,12 +3,15 @@
 .global trap_vector
 
 _start:
-    la sp, _stack_top
+    la sp, __stack_top
 
     la t0, trap_vector
     csrw mtvec, t0
 
     tail kmain
+
+spin:
+    j spin
 
 .align 4
 trap_vector:
@@ -80,6 +83,3 @@ trap_vector:
     addi sp, sp, 128
 
     mret
-
-spin:
-    j spin

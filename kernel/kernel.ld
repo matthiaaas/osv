@@ -29,9 +29,9 @@ SECTIONS
     . = ALIGN(16);
     __stack_limit = .;
     . += 4K;
-    _stack_top = .;
+    __stack_top = .;
   } > ram
 
   . = ALIGN(4K);
-  PROVIDE(_end = .);
+  PROVIDE(__kernel_end = .);
 }

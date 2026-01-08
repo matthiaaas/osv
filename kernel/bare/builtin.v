@@ -153,7 +153,7 @@ pub fn vsnprintf(str &char, size usize, format &char, ap va_list) int { return 0
 @[export: "getchar"]
 pub fn getchar() int { return 0 }
 
-@[  export: "bare_backtrace"]
+@[export: "bare_backtrace"]
 pub fn bare_backtrace() string { return "Backtrace N/A" }
 
 @[export: "exit"]
