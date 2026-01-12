@@ -1,8 +1,11 @@
 module main
 
 import memory
+import riscv
 
 #include "symbols.h"
+
+const kstack_size = 4096
 
 @[export: "kmain"]
 fn kmain() {
@@ -10,16 +13,14 @@ fn kmain() {
 
 	kmem.init()
 
-	mut i := u16(0)
-	mut overflows := u32(0)
-	for {
-		i++
-
-		if i == 0 {
-			overflows++
-			Uart.puts("Overflowed.\n")
-		}
+	mut kernel_stack_top := &u32(0)
+	{
+		page := kmem.alloc()
+		kernel_stack_top = &u32(u32(page) + kstack_size)
 	}
+	riscv.switch_sp(voidptr(kernel_stack_top))
+
+	for {}
 }
 
 fn main() {

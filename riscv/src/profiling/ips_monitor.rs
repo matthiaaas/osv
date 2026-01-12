@@ -33,3 +33,9 @@ impl IpsMonitor {
         }
     }
 }
+
+impl Default for IpsMonitor {
+    fn default() -> Self {
+        Self::new(0)
+    }
+}

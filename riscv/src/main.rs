@@ -64,7 +64,7 @@ fn main() {
 
     let mut cpu = Cpu::new(bus, None);
 
-    let mut ips_monitor = IpsMonitor::new(cpu.cycles());
+    let mut ips_monitor = IpsMonitor::default();
     loop {
         cpu.step();
         ips_monitor.update(cpu.cycles());

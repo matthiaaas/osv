@@ -12,6 +12,8 @@ pub mod csr_addr {
     pub const MTVAL: u16 = 0x343;
     pub const MIP: u16 = 0x344;
 
+    pub const SATP: u16 = 0x180;
+
     pub const MCYCLE: u16 = 0xB00;
     pub const MINSTRET: u16 = 0xB02;
 }
@@ -32,6 +34,8 @@ pub struct CsrFile {
     mtval: u32,
     mip: u32,
 
+    satp: u32,
+
     mcycle: u64,
     minstret: u64,
 }
@@ -49,6 +53,8 @@ impl CsrFile {
             mcause: 0,
             mtval: 0,
             mip: 0,
+
+            satp: 0,
 
             mcycle: 0,
             minstret: 0,
@@ -68,6 +74,7 @@ impl CsrFile {
             csr_addr::MCAUSE => Ok(self.mcause),
             csr_addr::MTVAL => Ok(self.mtval),
             csr_addr::MIP => Ok(self.mip),
+            csr_addr::SATP => Ok(self.satp),
             csr_addr::MCYCLE => Ok((self.mcycle & 0xFFFF_FFFF) as u32),
             csr_addr::MINSTRET => Ok((self.minstret & 0xFFFF_FFFF) as u32),
             _ => Err(()),
@@ -112,6 +119,10 @@ impl CsrFile {
             }
             csr_addr::MIP => {
                 self.mip = val & 0x888; // msip, mtip, meip only
+                Ok(())
+            }
+            csr_addr::SATP => {
+                self.satp = val;
                 Ok(())
             }
             csr_addr::MCYCLE => {
@@ -160,6 +171,14 @@ impl CsrFile {
 
     pub fn get_mpp(&self) -> u8 {
         ((self.mstatus & MSTATUS_MPP) >> 11) as u8
+    }
+
+    pub fn get_satp(&self) -> u32 {
+        self.satp
+    }
+
+    pub fn set_satp(&mut self, value: u32) {
+        self.satp = value;
     }
 
     pub fn increment_cycle(&mut self) {

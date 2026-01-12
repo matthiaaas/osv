@@ -15,7 +15,7 @@ pub enum Trap {
 impl Trap {
     pub fn cause_code(&self) -> u8 {
         match self {
-            Trap::IllegalInstruction(_) => 3,
+            Trap::IllegalInstruction(_) => 2,
             Trap::LoadAccessFault(_) => 5,
             Trap::StoreAccessFault(_) => 7,
             Trap::EnvironmentCall(priv_mode) => *priv_mode as u8 + 8,

@@ -23,7 +23,9 @@ mut:
 }
 
 pub fn (mut self Kmem) init() {
-	for i := u32(voidptr(C.__kernel_end)); i < phystop; i += pgsize {
+	kernel_end := u32(voidptr(C.__kernel_end))
+
+	for i := kernel_end; i < phystop; i += pgsize {
 		self.kfree(voidptr(i))
 	}
 }
@@ -34,6 +36,7 @@ pub fn (mut self Kmem) alloc() voidptr {
 			return voidptr(0)
 		}
 		r := self.free_list
+		memset(r, 0, pgsize)
 		self.free_list = r.next
 		return voidptr(r)
 	}

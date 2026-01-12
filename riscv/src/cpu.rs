@@ -32,8 +32,9 @@ impl Cpu {
     }
 
     pub fn fetch(&mut self) -> Result<Instr, Trap> {
+        let phys_pc = self.translate(self.pc)?;
         self.bus
-            .load(self.pc, INSTRUCTION_SIZE)
+            .load(phys_pc, INSTRUCTION_SIZE)
             .map(Instr::from)
             .map_err(Trap::from)
     }
@@ -79,9 +80,6 @@ impl Cpu {
         let instr = self.fetch()?;
         self.next_pc = self.pc.wrapping_add(INSTRUCTION_SIZE as u32);
         self.execute(instr)?;
-        if self.cycles() == 1_000_001 {
-            return Err(Trap::IllegalInstruction(Instr::new(4)));
-        }
         Ok(())
     }
 
@@ -96,5 +94,33 @@ impl Cpu {
         self.priv_mode = PrivilegeMode::Machine;
 
         self.next_pc = self.csr_file.get_mtvec();
+    }
+
+    pub fn translate(&mut self, virt_addr: u32) -> Result<u32, Trap> {
+        let satp = self.csr_file.get_satp();
+        if satp & 0x8000_0000 == 0 {
+            return Ok(virt_addr);
+        }
+
+        let root_ppn = satp & 0x003f_ffff;
+        let root_pt_addr = root_ppn << 12;
+
+        let vpn1 = (virt_addr >> 22) & 0x3ff;
+        let pte1_addr = root_pt_addr + (vpn1 * 4);
+        let pte1 = self.bus.load(pte1_addr, 4)?;
+
+        let pt0_ppn = (pte1 >> 10) & 0x003f_ffff;
+        let pt0_addr = pt0_ppn << 12;
+
+        let vpn0 = (virt_addr >> 12) & 0x3ff;
+        let pte0_addr = pt0_addr + (vpn0 * 4);
+        let pte0 = self.bus.load(pte0_addr, 4)?;
+
+        let final_ppn = (pte0 >> 10) & 0x003f_ffff;
+
+        let offset = virt_addr & 0xfff;
+
+        let phys_addr = (final_ppn << 12) | offset;
+        Ok(phys_addr)
     }
 }
