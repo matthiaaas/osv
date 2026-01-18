@@ -3,6 +3,7 @@ module main
 import riscv
 
 pub struct TrapFrame {
+mut:
 	ra u32
 	sp u32
 	gp u32
@@ -44,19 +45,33 @@ pub struct TrapFrame {
 }
 
 @[export: "trap_handler"]
-fn trap_handler(trapframe TrapFrame) {
+fn trap_handler(mut trapframe TrapFrame) {
 	mcause := riscv.r_mcause()
 
 	match mcause {
 		2 {
 			Uart.puts("Illegal Instruction\n")
+			trapframe.epc += 4
+		}
+		8 {
+			Uart.puts("Environment Call (U)\n")
+			trapframe.epc += 4
+		}
+		3 {
+			Uart.puts("Breakpoint\n")
+			trapframe.epc += 4
 		}
 		else {
 			Uart.puts("Unknown Exception\n")
 		}
 	}
+}
 
+pub fn trap_return(mut trapframe TrapFrame) {
+	mut mstatus := riscv.r_mstatus()
+	mstatus &= ~(u32(3) << 11)
+	mstatus |= u32(1) << 7
+	riscv.w_mstatus(mstatus)
+	riscv.w_mepc(trapframe.epc)
 	riscv.mret()
-
-	for {}
 }

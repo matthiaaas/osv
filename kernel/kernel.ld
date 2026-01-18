@@ -10,6 +10,7 @@ SECTIONS
 {
   .text : {
     *(.text.init)
+    *(.text.trampoline)
     *(.text)
   } > ram
 

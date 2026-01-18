@@ -69,21 +69,18 @@ $(BUILD_DIR)/kernel.c: $(VSOURCES) | $(BUILD_DIR)
 	$(V) $(VFLAGS) -o $@ .
 
 $(BUILD_DIR)/kernel.fixed.c: $(BUILD_DIR)/kernel.c | $(BUILD_DIR)
-	$(SED) '/typedef.*size_t;/d' $< > $@.tmp
-	$(SED) -e 's/mv %a0, %sp/addi sp, a0, 0/g' \
-	       -e 's/csrr mcause, %\[a\]/csrr %\[a\], mcause/g' $@.tmp > $@
-	rm $@.tmp
+	$(SED) '/typedef.*size_t;/d' $< > $@
 
-$(BUILD_DIR)/kernel.elf: start.s kernel.ld $(BUILD_DIR)/kernel.fixed.c | $(BUILD_DIR)
+$(BUILD_DIR)/kernel.elf: start.s trampoline.s kernel.ld $(BUILD_DIR)/kernel.fixed.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) \
 		-o $@ \
-		start.s $(BUILD_DIR)/kernel.fixed.c $(LIBGCC)
+		start.s trampoline.s $(BUILD_DIR)/kernel.fixed.c $(LIBGCC)
 
 readelf: $(BUILD_DIR)/kernel.elf
 	$(READELF) -a $<
 
 objdump: $(BUILD_DIR)/kernel.elf
-	$(OBJDUMP) -d $<
+	$(OBJDUMP) -d $< > $(BUILD_DIR)/kernel.objdump
 
 hexdump: $(BUILD_DIR)/kernel.elf
 	$(HEXDUMP) -C $<
