@@ -84,12 +84,16 @@ impl Cpu {
     }
 
     fn handle_trap(&mut self, trap: Trap) {
-        println!("Trap occurred: {:?} at PC={:#010x}", trap, self.pc);
+        println!(
+            "Trap occurred: {:?} at PC={:#010x}, {:?}",
+            trap, self.pc, self.priv_mode
+        );
 
         self.csr_file.set_exception_pc(self.pc);
         self.csr_file.set_cause(trap.cause_code() as u32);
         self.csr_file.set_mtval(trap.value());
-        self.csr_file.enter_exception_mode();
+        let prev_priv = self.priv_mode;
+        self.csr_file.enter_exception_mode(prev_priv);
 
         self.priv_mode = PrivilegeMode::Machine;
 

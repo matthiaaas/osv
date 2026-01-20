@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::isa::PrivilegeMode;
+
 pub mod csr_addr {
     pub const MSTATUS: u16 = 0x300;
     pub const MISA: u16 = 0x301;
@@ -189,16 +191,19 @@ impl CsrFile {
         self.minstret = self.minstret.wrapping_add(1);
     }
 
-    pub fn enter_exception_mode(&mut self) {
-        self.mstatus &= !MSTATUS_MIE;
+    pub fn enter_exception_mode(&mut self, prev_priv: PrivilegeMode) {
+        let mie = self.get_mie();
 
-        if self.get_mie() {
+        if mie {
             self.mstatus |= MSTATUS_MPIE;
         } else {
             self.mstatus &= !MSTATUS_MPIE;
         }
 
-        self.mstatus |= MSTATUS_MPP;
+        self.mstatus &= !MSTATUS_MIE;
+
+        self.mstatus &= !MSTATUS_MPP;
+        self.mstatus |= (prev_priv as u32) << 11;
     }
 
     pub fn return_from_exception_mode(&mut self) {
