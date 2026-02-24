@@ -26,27 +26,6 @@ VFLAGS = \
 	-d no_backtrace \
 	-d no_bool \
 	-d no_main
-# VFLAGS = -arch rv32 \
-# 	-m32 \
-# 	-freestanding \
-# 	-bare-builtin-dir \
-# 	-d no_main \
-# 	-d no_bool \
-# 	-gc none \
-# 	-cc $(CC)
-# VFLAGS = \
-# 	-arch rv32 \
-# 	-m32 \
-# 	-os vinix \
-#     -enable-globals \
-#     -nofloat \
-#     -manualfree \
-#     -experimental \
-#     -message-limit 10000 \
-#     -gc none \
-#     -d no_backtrace \
-# 	-d no_bool \
-# 	-d no_main
 VSOURCES := $(shell find . -name "*.v")
 
 ASM = nasm
