@@ -55,7 +55,10 @@ fn kernel_main() {
 		code := &u32(user_code)
 		code[0] = 0x00000513 // li a0, 0
 		code[1] = 0x00000073 // ecall
-		code[2] = 0x0000006f // j .
+		code[2] = 0x00000073 // ecall
+		code[3] = 0x00000073 // ecall
+		code[4] = 0x00000073 // ecall
+		code[5] = 0x0000006f // j .
 	}
 
 	user_code_va := u32(0x0000_0000)

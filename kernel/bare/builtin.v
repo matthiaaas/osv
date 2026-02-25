@@ -6,7 +6,7 @@ module builtin
 pub type va_list = voidptr
 
 const uart_base = usize(0x1000_0000) 
-const heap_base = usize(0x8005_0000)
+const heap_base = usize(0x8008_0000)
 
 __global (
     heap_ptr usize

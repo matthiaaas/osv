@@ -15,6 +15,7 @@
 - Always explain the code you provide, and make sure to break it down into small, digestible example-driven pieces.
 - Only use comments to describe extreme detail behavior or to articulate strictly necessary ideas in a hyper concise manner.
 - Do NOT put slop comments all over the place.
+- Abbreviations are only encouraged if they are inherently obvious. In classical OS, there are way too mind bending concepts to be abbreviated, so I encourage you to avoid abbreviations which are non-obvious to amateur OS developers.
 
 # Plan Mode
 

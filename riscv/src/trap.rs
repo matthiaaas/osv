@@ -2,8 +2,9 @@ use crate::{
     bus::BusError,
     isa::{Instr, PrivilegeMode},
 };
+use core::fmt;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Trap {
     IllegalInstruction(Instr),
@@ -28,6 +29,25 @@ impl Trap {
             Trap::LoadAccessFault(addr) => *addr,
             Trap::StoreAccessFault(addr) => *addr,
             Trap::EnvironmentCall(_) => 0,
+        }
+    }
+}
+
+impl fmt::Debug for Trap {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Trap::IllegalInstruction(instr) => {
+                write!(f, "IllegalInstruction {{ word: {:#010x} }}", instr.word())
+            }
+            Trap::LoadAccessFault(addr) => {
+                write!(f, "LoadAccessFault {{ addr: {:#010x} }}", addr)
+            }
+            Trap::StoreAccessFault(addr) => {
+                write!(f, "StoreAccessFault {{ addr: {:#010x} }}", addr)
+            }
+            Trap::EnvironmentCall(priv_mode) => {
+                f.debug_tuple("EnvironmentCall").field(priv_mode).finish()
+            }
         }
     }
 }
