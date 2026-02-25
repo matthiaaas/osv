@@ -6,45 +6,43 @@ import riscv
 fn C.__kernel_end()
 
 __global (
-	kmem Kmem
+	page_allocator PageAllocator
 )
 
-pub const phystop = 0x80000000 + 1 * 1024 * 1024 // 1MB
+pub const phystop = 0x8000_0000 + 1 * 1024 * 1024 // 1MB
 
-@[noinit]
-struct Run {
+struct FreePage {
 mut:
-	next &Run
+	next &FreePage
 }
 
 @[noinit]
-pub struct Kmem {
+pub struct PageAllocator {
 mut:
-	free_list &Run
+	free_list &FreePage
 }
 
-pub fn (mut self Kmem) init() {
+pub fn (mut allocator PageAllocator) init() {
 	kernel_end := riscv.pgroundup(u32(voidptr(C.__kernel_end)))
-
-	for i := kernel_end; i < phystop; i += riscv.page_size {
-		self.kfree(voidptr(i))
+	for page_addr := kernel_end; page_addr < phystop; page_addr += riscv.page_size {
+		allocator.deallocate(voidptr(page_addr))
 	}
 }
 
-pub fn (mut self Kmem) alloc() voidptr {
-	if self.free_list == voidptr(0) {
-		return voidptr(0)
+pub fn (mut allocator PageAllocator) allocate() ?voidptr {
+	if allocator.free_list == unsafe { nil } {
+		return none
 	}
-	r := self.free_list
-	self.free_list = r.next
-	memset(r, 0, riscv.page_size)
-	return voidptr(r)
+	page := allocator.free_list
+	allocator.free_list = page.next
+	memset(page, 0, riscv.page_size)
+	return voidptr(page)
 }
 
-pub fn (mut self Kmem) kfree(pa voidptr) {
+pub fn (mut allocator PageAllocator) deallocate(phys_addr voidptr) {
 	unsafe {
-		r := &Run(voidptr(pa))
-		r.next = self.free_list
-		self.free_list = r
+		page := &FreePage(phys_addr)
+		page.next = allocator.free_list
+		allocator.free_list = page
 	}
 }

@@ -6,6 +6,8 @@ __global (
 	kernel_pagetable Pagetable
 )
 
+pub const pagetable_size = 1024
+
 pub const pte_v = u32(1 << 0)
 pub const pte_r = u32(1 << 1)
 pub const pte_w = u32(1 << 2)
@@ -19,23 +21,41 @@ pub type Pagetable = &u32
 pub type PagetableEntry = &u32
 pub type VirtAddr = u32
 
-pub fn Pagetable.new() Pagetable {
-	return Pagetable(kmem.alloc())
+pub fn Pagetable.new() ?Pagetable {
+	page := page_allocator.allocate()?
+	return Pagetable(page)
+}
+
+pub fn (pagetable Pagetable) at(vpn u32) PagetableEntry {
+	return PagetableEntry(unsafe { &u32(pagetable)[vpn] })
 }
 
 pub fn (pagetable Pagetable) walk(virt_addr VirtAddr, alloc bool) ?PagetableEntry {
+	pte := pagetable.at(virt_addr.vpn1()) or {
+		if !alloc {
+			return none
+		}
+
+		subtable := Pagetable.new() or {
+			return none
+		}
+	}
+
+	return pagetable.at(virt_addr.vpn0())
+
+	// pagetable.select(virt_addr.vpn1())
 	mut pt := &u32(pagetable)
 	pte := PagetableEntry(unsafe { &pt[virt_addr.vpn1()] })
 
 	if pte.is_valid() {
+		// pte.as_pagetable()
 		pt = &u32(unsafe { voidptr(ppn_to_pa(pte.value())) })
 	} else {
 		if !alloc {
 			return none
 		}
 
-		new_page := kmem.alloc()
-		if new_page == voidptr(0) {
+		new_page := page_allocator.allocate() or {
 			return none
 		}
 		memset(new_page, 0, riscv.page_size)
