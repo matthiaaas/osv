@@ -14,10 +14,3 @@ pub fn Uart.puts(s string) {
 		Uart.put(c)
 	}
 }
-
-pub fn Uart.puts_u32(n u32) {
-	for i := 0; i < 4; i++ {
-		byt := u8((n >> (i * 8)) & 0xFF)
-		Uart.put(byt)
-	}
-}

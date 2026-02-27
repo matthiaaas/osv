@@ -45,18 +45,8 @@ fn main() {
     let uart0 = Uart::new();
 
     let mut ram = Dram::new(1024 * 1024); // 1 MB RAM
-    // let program = vec![
-    //     0x13, 0x05, 0x00, 0x00, // addi a0, zero, 0
-    //     0x93, 0x05, 0x05, 0x01, // addi a1, a0, 16,
-    //     0xb3, 0x85, 0xb5, 0x00, // add a1, a1, a1
-    // ];
-    // ram.flash(0x0, &program).expect("RAM too sparse");
-    load_elf_into_ram(
-        "/Users/matthias/Documents/private/projects/osv/kernel/target/kernel.elf",
-        &mut ram,
-        0x8000_0000,
-    )
-    .expect("Failed to load ELF into RAM");
+    load_elf_into_ram("../kernel/target/kernel.elf", &mut ram, 0x8000_0000)
+        .expect("Failed to load kernel ELF into RAM");
 
     let mut bus = Bus::new();
     bus.map_to(0x8000_0000, Box::new(ram));

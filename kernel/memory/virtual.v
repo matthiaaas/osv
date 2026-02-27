@@ -6,7 +6,7 @@ __global (
 	kernel_pagetable Pagetable
 )
 
-pub const pagetable_size = 1024
+pub const pagetable_size = u32(1024)
 
 pub const pte_v = u32(1 << 0)
 pub const pte_r = u32(1 << 1)
@@ -18,79 +18,68 @@ pub const pte_a = u32(1 << 6)
 pub const pte_d = u32(1 << 7)
 
 pub type Pagetable = &u32
-pub type PagetableEntry = &u32
-pub type VirtAddr = u32
 
 pub fn Pagetable.new() ?Pagetable {
-	page := page_allocator.allocate()?
+	page := kernel.page_allocator.allocate()?
 	return Pagetable(page)
 }
 
+@[inline]
 pub fn (pagetable Pagetable) at(vpn u32) PagetableEntry {
-	return PagetableEntry(unsafe { &u32(pagetable)[vpn] })
+	assert vpn < pagetable_size
+	return PagetableEntry(unsafe { &u32(pagetable) + vpn })
+}
+
+@[inline]
+pub fn (pagetable Pagetable) phys_addr() PhysAddr {
+	return PhysAddr(voidptr(pagetable))
 }
 
 pub fn (pagetable Pagetable) walk(virt_addr VirtAddr, alloc bool) ?PagetableEntry {
-	pte := pagetable.at(virt_addr.vpn1()) or {
-		if !alloc {
-			return none
-		}
-
-		subtable := Pagetable.new() or {
-			return none
-		}
-	}
-
-	return pagetable.at(virt_addr.vpn0())
-
-	// pagetable.select(virt_addr.vpn1())
-	mut pt := &u32(pagetable)
-	pte := PagetableEntry(unsafe { &pt[virt_addr.vpn1()] })
+	pte := pagetable.at(virt_addr.vpn1())
 
 	if pte.is_valid() {
-		// pte.as_pagetable()
-		pt = &u32(unsafe { voidptr(ppn_to_pa(pte.value())) })
-	} else {
-		if !alloc {
-			return none
-		}
+        subtable := pte.as_pagetable()
+        return subtable.at(virt_addr.vpn0())
+    }
 
-		new_page := page_allocator.allocate() or {
-			return none
-		}
-		memset(new_page, 0, riscv.page_size)
-
-		pte.set(pa_to_ppn(u32(new_page)) | pte_v)
-
-		pt = &u32(new_page)
+	if !alloc {
+		return none
 	}
 
-	return PagetableEntry(unsafe { &pt[virt_addr.vpn0()] })
+	subtable := Pagetable.new()?
+	pte.point_to(subtable.phys_addr(), 0)
+
+	return subtable.at(virt_addr.vpn0())
 }
 
-pub fn (pagetable Pagetable) map_pages(virt_addr u32, size u32, phys_addr u32, perm u32) {
-	mut a := riscv.pgrounddown(virt_addr)
-	mut pa := riscv.pgrounddown(phys_addr)
-	last := riscv.pgrounddown(virt_addr + size - 1)
+pub fn (pagetable Pagetable) map_region(virt_addr VirtAddr, size u32, phys_addr PhysAddr, perms u32) {
+	mut curr_virt_addr := riscv.pgrounddown(virt_addr)
+	mut curr_phys_addr := riscv.pgrounddown(phys_addr)
+	end_virt_addr := riscv.pgrounddown(virt_addr + size - 1)
 
 	for {
-		pte := pagetable.walk(a, true) or {
-			panic("map_pages walk failed")
+		pte := pagetable.walk(curr_virt_addr, true) or {
+			panic("map_region walk failed")
 		}
 
 		if pte.is_valid() {
-			panic("remap")
+			panic("remap collision")
 		}
 
-		pte.set(pa_to_ppn(pa) | u32(perm) | pte_v)
+		pte.point_to(curr_phys_addr, perms)
 
-		if a == last {
+		if curr_virt_addr == end_virt_addr {
 			break
 		}
 
-		a += riscv.page_size
-		pa += riscv.page_size
+		curr_virt_addr += riscv.page_size
+		curr_phys_addr += riscv.page_size
 	}
+}
+
+pub fn (pagetable Pagetable) activate() {
+
 }
 
 @[inline]
@@ -99,38 +88,47 @@ pub fn (pagetable Pagetable) to_ppn() u32 {
 }
 
 @[inline]
-pub fn (pte PagetableEntry) value() u32 {
+pub fn (pagetable Pagetable) raw_value() u32 {
+	return u32(voidptr(pagetable))
+}
+
+pub type PagetableEntry = &u32
+
+@[inline]
+pub fn (pte PagetableEntry) raw_value() u32 {
 	return unsafe { *(&u32(pte)) }
 }
 
+
 @[inline]
-pub fn (pte PagetableEntry) set(val u32) {
-	unsafe {
-		*(&u32(pte)) = val
-	}
+fn (pte PagetableEntry) set(val u32) {
+	unsafe { *(&u32(pte)) = val }
+}
+
+@[inline]
+pub fn (pte PagetableEntry) point_to(phys_addr PhysAddr, flags u32) {
+	pte.set(phys_addr.to_ppn() | flags | pte_v)
 }
 
 @[inline]
 pub fn (pte PagetableEntry) is_valid() bool {
-	return (pte.value() & pte_v) != 0
+	return (pte.raw_value() & pte_v) != 0
 }
 
 @[inline]
-pub fn (virt_addr VirtAddr) vpn1() u32 {
-	return (u32(virt_addr) >> 22) & 0x3ff
+pub fn (pte PagetableEntry) phys_addr() PhysAddr {
+	return PhysAddr(voidptr((pte.raw_value() >> 10) << 12))
 }
 
 @[inline]
-pub fn (virt_addr VirtAddr) vpn0() u32 {
-	return (u32(virt_addr) >> 12) & 0x3ff
+pub fn (pte PagetableEntry) as_pagetable() Pagetable {
+	return Pagetable(voidptr(pte.phys_addr()))
 }
 
-@[inline]
-fn pa_to_ppn(pa u32) u32 {
-	return (pa >> 12) << 10
-}
-
-@[inline]
-fn ppn_to_pa(ppn u32) u32 {
-	return (ppn >> 10) << 12
+pub struct MemoryRegion {
+pub:
+	virt_addr VirtAddr
+	phys_addr PhysAddr
+	size u32
+	perms u32
 }

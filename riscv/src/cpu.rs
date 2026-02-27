@@ -89,6 +89,8 @@ impl Cpu {
             trap, self.pc, self.priv_mode
         );
 
+        loop {}
+
         self.csr_file.set_exception_pc(self.pc);
         self.csr_file.set_cause(trap.cause_code() as u32);
         self.csr_file.set_mtval(trap.value());
