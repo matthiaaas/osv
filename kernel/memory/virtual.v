@@ -2,10 +2,6 @@ module memory
 
 import riscv
 
-__global (
-	kernel_pagetable Pagetable
-)
-
 pub const pagetable_size = u32(1024)
 
 pub const pte_v = u32(1 << 0)

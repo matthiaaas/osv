@@ -1,6 +1,7 @@
 module proc
 
-import memory { Pagetable }
+import riscv
+import memory { Pagetable, VirtAddr, PhysAddr }
 
 pub enum ProcessState {
 	unused
@@ -11,36 +12,49 @@ pub enum ProcessState {
 }
 
 pub struct Process {
+pub:
 	pid u32
 mut:
 	state ProcessState
 	pagetable Pagetable
 	// context TrapFrame
 	kernel_sp u32
+	// file_descriptors []File
 }
 
 pub fn Process.new(pid u32) ?Process {
-	return none
-	// stack_page := kmem.alloc()
-	// if stack_page == voidptr(0) {
-	// 	return none
-	// }
+	pagetable := Pagetable.new()?
 
-	// trapframe_page := kmem.alloc()
-	// if trapframe_page == voidptr(0) {
-	// 	kmem.kfree(stack_page)
-	// 	return none
-	// }
+	user_code_page := kernel.page_allocator.allocate()?
+	user_code_virt_addr := VirtAddr(0x1000)
 
-	// stack_top := voidptr(u32(stack_page) + kstack_size)
-	// trapframe := unsafe { &TrapFrame(trapframe_page) }
+	pagetable.map_region(
+		user_code_virt_addr,
+		riscv.page_size,
+		PhysAddr(user_code_page),
+		memory.pte_r | memory.pte_x | memory.pte_u
+	)
 
-	// return Process{
-	// 	pid: pid,
-	// 	state: .unused
-	// 	pagetable: Pagetable(0)
-	// 	trapframe: trapframe
-	// 	kernel_sp: stack_top
-	// }
+	user_stack_page := kernel.page_allocator.allocate()?
+	user_stack_virt_addr := VirtAddr(0x2000)
+	pagetable.map_region(
+		user_stack_virt_addr,
+		riscv.page_size,
+		PhysAddr(user_stack_page),
+		memory.pte_r | memory.pte_w | memory.pte_u
+	)
+
+	unsafe {
+        code := &u32(user_code_page)
+        code[0] = 0x02a00513 // li a0, 42
+        code[1] = 0x00000073 // ecall
+        code[2] = 0xffdff06f // j .-4  (loop back to ecall)
+    }
+
+	return Process{
+		pid: pid
+		state: .ready
+		pagetable: pagetable
+	}
 }
 

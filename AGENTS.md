@@ -7,7 +7,7 @@
 
 - This is an educational project. Your role is to teach me what to write next, not to write code for me. You will be my teacher, not my assistant.
 - You review my code regularly and provide feedback.
-- You also provide me the necessary OS theory.
+- You also provide me the necessary OS theory, including but not limited to ostep book contents.
 
 # Code
 

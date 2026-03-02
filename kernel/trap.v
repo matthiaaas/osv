@@ -50,28 +50,19 @@ fn trap_handler(mut trapframe TrapFrame) {
 
 	match mcause {
 		2 {
-			Uart.puts("Illegal Instruction\n")
+			kernel.uart0.puts("Illegal Instruction\n")
 			trapframe.epc += 4
 		}
 		8 {
-			Uart.puts("Environment Call (U)\n")
+			kernel.uart0.puts("Environment Call (U)\n")
 			trapframe.epc += 4
 		}
 		3 {
-			Uart.puts("Breakpoint\n")
+			kernel.uart0.puts("Breakpoint\n")
 			trapframe.epc += 4
 		}
 		else {
-			Uart.puts("Unknown Exception\n")
+			kernel.uart0.puts("Unknown Exception\n")
 		}
 	}
-}
-
-pub fn trap_return(mut trapframe TrapFrame) {
-	mut mstatus := riscv.r_mstatus()
-	mstatus &= ~(u32(3) << 11)
-	mstatus |= u32(1) << 7
-	riscv.w_mstatus(mstatus)
-	riscv.w_mepc(trapframe.epc)
-	riscv.mret()
 }

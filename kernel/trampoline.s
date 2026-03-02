@@ -5,10 +5,9 @@
 .align 4
 trap_vector:
     csrrw sp, mscratch, sp
+    sw t0, 16(sp)
     csrr t0, mscratch
     sw t0, 4(sp)
-
-    sw t0, 16(sp)
 
     csrr t0, mepc
     sw t0, 124(sp)

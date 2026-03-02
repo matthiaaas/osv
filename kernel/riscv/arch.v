@@ -2,7 +2,7 @@ module riscv
 
 pub const dram_base = u32(0x8000_0000)
 pub const dram_size = u32(1 * 1024 * 1024) // 1MB
-pub const phystop = dram_base + dram_size // 1MB
+pub const phystop = dram_base + dram_size
 
 pub const uart0_base = u32(0x1000_0000)
 pub const uart_size = u32(0x1000)
