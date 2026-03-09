@@ -16,8 +16,8 @@ pub const pte_d = u32(1 << 7)
 pub type Pagetable = &u32
 
 pub fn Pagetable.new() ?Pagetable {
-	page := kernel.page_allocator.allocate()?
-	return Pagetable(page)
+	frame := kernel.frame_allocator.allocate()?
+	return Pagetable(voidptr(frame))
 }
 
 @[inline]
@@ -50,9 +50,9 @@ pub fn (pagetable Pagetable) walk(virt_addr VirtAddr, alloc bool) ?PagetableEntr
 }
 
 pub fn (pagetable Pagetable) map_region(virt_addr VirtAddr, size u32, phys_addr PhysAddr, perms u32) {
-	mut curr_virt_addr := riscv.pgrounddown(virt_addr)
-	mut curr_phys_addr := riscv.pgrounddown(phys_addr)
-	end_virt_addr := riscv.pgrounddown(virt_addr + size - 1)
+	mut curr_virt_addr := virt_addr.page_down()
+	mut curr_phys_addr := phys_addr.page_down()
+	end_virt_addr := VirtAddr(virt_addr + size - 1).page_down()
 
 	for {
 		pte := pagetable.walk(curr_virt_addr, true) or {

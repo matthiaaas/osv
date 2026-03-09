@@ -4,7 +4,7 @@ module main
 import riscv
 import devices { Uart }
 import proc { Process, Scheduler, Dispatcher }
-import memory { PageAllocator, Pagetable, MemoryRegion }
+import memory { FrameAllocator, Pagetable, MemoryRegion }
 
 __global (
 	kernel Kernel
@@ -28,14 +28,14 @@ const kernel_regions := [
 pub struct Kernel {
 pub mut:
 	uart0 Uart
-	page_allocator PageAllocator
+	frame_allocator FrameAllocator
 	pagetable Pagetable
 	scheduler Scheduler
 	dispatcher Dispatcher
 }
 
 pub fn Kernel.boot() {
-	kernel.page_allocator.init()
+	kernel.frame_allocator.init()
 
 	kernel.pagetable = Pagetable.new() or {
 		panic("Failed to create kernel pagetable")

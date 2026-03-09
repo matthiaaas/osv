@@ -35,10 +35,10 @@ pub struct Pipe /* satisfies File */ {
 	write_pos u32
 }
 
-pub struct Process {
-pub:
-	pid u32
-mut:
-	...
-	file_descriptors []File
-}
+// pub struct Process {
+// pub:
+// 	pid u32
+// mut:
+// 	...
+// 	file_descriptors []File
+// }
