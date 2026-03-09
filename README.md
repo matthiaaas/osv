@@ -8,14 +8,14 @@ Toy operating system and RISC-V emulator written in [V](https://vlang.io) and Ru
 - [V](https://vlang.io) >v0.5.0
 - Rust
 
-## Building
+## Build Kernel
 
 ```
 cd kernel
 make
 ```
 
-## Running
+## Run Emulator
 
 ```
 cd riscv

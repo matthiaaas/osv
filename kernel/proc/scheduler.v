@@ -5,7 +5,7 @@ mut:
 	processes [64]Process
 }
 
-fn (scheduler Scheduler) index_of(pid u32) ?int {
+fn (scheduler &Scheduler) index_of(pid u32) ?int {
 	for i, process in scheduler.processes {
 		if process.pid == pid {
 			return i
@@ -14,7 +14,7 @@ fn (scheduler Scheduler) index_of(pid u32) ?int {
 	return none
 }
 
-pub fn (mut scheduler Scheduler) pick_next(last_pid u32) ?Process {
+pub fn (scheduler &Scheduler) pick_next(last_pid u32) ?&Process {
 	start := if idx := scheduler.index_of(last_pid) {
 		(idx + 1) % scheduler.processes.len
 	} else {
@@ -23,7 +23,7 @@ pub fn (mut scheduler Scheduler) pick_next(last_pid u32) ?Process {
 
 	for i in 0 .. scheduler.processes.len {
 		idx := (start + i) % scheduler.processes.len
-		process := scheduler.processes[idx]
+		process := unsafe { &scheduler.processes[idx]}
 
 		if process.state == .ready {
 			return process

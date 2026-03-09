@@ -1,7 +1,5 @@
 module main
 
-import memory
-
 #include "symbols.h"
 
 fn C._vinit(argc int, argv voidptr)

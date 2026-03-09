@@ -14,16 +14,29 @@ pub enum ProcessState {
 pub struct Process {
 pub:
 	pid u32
-mut:
+pub mut:
 	state ProcessState
 	pagetable Pagetable
-	// context TrapFrame
-	kernel_sp u32
+	trapframe TrapFrame
+	// kernel_sp u32
 	// file_descriptors []File
 }
 
 pub fn Process.new(pid u32) ?Process {
 	pagetable := Pagetable.new()?
+
+	pagetable.map_region(
+        VirtAddr(riscv.dram_base),
+        riscv.dram_size,
+        PhysAddr(riscv.dram_base),
+        memory.pte_r | memory.pte_w | memory.pte_x
+    )
+    pagetable.map_region(
+        VirtAddr(riscv.uart0_base),
+        riscv.uart_size,
+        PhysAddr(riscv.uart0_base),
+        memory.pte_r | memory.pte_w
+    )
 
 	user_code_frame := kernel.frame_allocator.allocate()?
 	user_code_virt_addr := VirtAddr(0x1000)
@@ -55,6 +68,10 @@ pub fn Process.new(pid u32) ?Process {
 		pid: pid
 		state: .ready
 		pagetable: pagetable
+		trapframe: TrapFrame{
+			epc: user_code_virt_addr
+			sp: user_stack_virt_addr + riscv.page_size
+		}
 	}
 }
 

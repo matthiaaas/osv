@@ -40,11 +40,7 @@ pub fn Kernel.boot() {
 	kernel.pagetable = Pagetable.new() or {
 		panic("Failed to create kernel pagetable")
 	}
-
 	kernel.map_kernel()
-
-	kernel.scheduler = Scheduler{}
-	kernel.dispatcher = Dispatcher{}
 
 	init_process := Process.new(1) or {
 		panic("Failed to create init process")
@@ -52,7 +48,7 @@ pub fn Kernel.boot() {
 	kernel.scheduler.enqueue(init_process)
 }
 
-pub fn (k Kernel) map_kernel() {
+pub fn (k &Kernel) map_kernel() {
 	for region in kernel_regions {
 		k.pagetable.map_region(region.virt_addr, region.size, region.phys_addr, region.perms)
 	}
@@ -64,13 +60,13 @@ pub fn (mut k Kernel) run() {
 	for {
 		// TODO: disable interrerupts
 
-		next_process := k.scheduler.pick_next(last_pid) or {
+		mut next_process := k.scheduler.pick_next(last_pid) or {
 			// TODO: enable interrupts & wait for interrupt: wfi
 			continue
 		}
 
 		last_pid = next_process.pid
-		k.dispatcher.run(next_process)
+		k.dispatcher.switch_to(mut next_process)
 
 		// TODO: enable interrupts
 	}

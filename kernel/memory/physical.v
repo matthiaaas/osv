@@ -17,8 +17,8 @@ mut:
 
 pub fn (mut allocator FrameAllocator) init() {
 	kernel_end := PhysAddr(u32(voidptr(C.__kernel_end))).page_up()
-	for page_addr := kernel_end; page_addr < riscv.phystop; page_addr += riscv.page_size {
-		allocator.deallocate(page_addr)
+	for frame_addr := kernel_end; frame_addr < riscv.phystop; frame_addr += riscv.page_size {
+		allocator.deallocate(frame_addr)
 	}
 }
 
