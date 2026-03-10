@@ -84,9 +84,10 @@ impl Cpu {
     }
 
     fn handle_trap(&mut self, trap: Trap) {
+        let phys_pc = self.translate(self.pc).unwrap_or(0);
         println!(
-            "Trap occurred: {:?} at PC={:#010x}, {:?}",
-            trap, self.pc, self.priv_mode
+            "Trap occurred: {:?} at PC={:#010x}({:#010x}), {:?}",
+            trap, self.pc, phys_pc, self.priv_mode
         );
 
         self.csr_file.set_exception_pc(self.pc);

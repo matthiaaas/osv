@@ -23,7 +23,14 @@ pub fn exec_op_imm(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
         }
         0b011 => {
             // SLTIU (Set Less Than Imm Unsigned)
-            todo!()
+            let rs1_val = cpu.reg_file.read(i.rs1());
+            let imm_val = i.imm() as u32;
+            if rs1_val < imm_val {
+                cpu.reg_file.write(i.rd(), 1);
+            } else {
+                cpu.reg_file.write(i.rd(), 0);
+            }
+            Ok(())
         }
         0b100 => {
             // XORI
@@ -103,11 +110,22 @@ pub fn exec_op_reg(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
         }
         0b001 => {
             // SLL
-            todo!()
+            let rs1_val = cpu.reg_file.read(r.rs1());
+            let rs2_val = cpu.reg_file.read(r.rs2()) & 0x1f;
+            let res = rs1_val << rs2_val;
+            cpu.reg_file.write(r.rd(), res);
+            Ok(())
         }
         0b010 => {
             // SLT
-            todo!()
+            let rs1_val = cpu.reg_file.read(r.rs1()) as i32;
+            let rs2_val = cpu.reg_file.read(r.rs2()) as i32;
+            if rs1_val < rs2_val {
+                cpu.reg_file.write(r.rd(), 1);
+            } else {
+                cpu.reg_file.write(r.rd(), 0);
+            }
+            Ok(())
         }
         0b011 => {
             // SLTU
@@ -137,8 +155,12 @@ pub fn exec_op_reg(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
                     Ok(())
                 }
                 0x20 => {
-                    // SRA^
-                    todo!()
+                    // SRA
+                    let rs1_val = cpu.reg_file.read(r.rs1()) as i32;
+                    let rs2_val = cpu.reg_file.read(r.rs2()) & 0x1f;
+                    let res = (rs1_val >> rs2_val) as u32;
+                    cpu.reg_file.write(r.rd(), res);
+                    Ok(())
                 }
                 _ => Err(Trap::IllegalInstruction(instr)),
             }

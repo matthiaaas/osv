@@ -1,93 +1,73 @@
+@[has_globals]
 module main
 
-import memory
 import riscv
+import devices { Uart }
+import proc { Process, Scheduler, Dispatcher }
+import memory { FrameAllocator, Pagetable, MemoryRegion }
 
-#include "symbols.h"
+__global (
+	kernel Kernel
+)
 
-const kstack_size = 4096
+const kernel_regions := [
+	MemoryRegion{
+		virt_addr: riscv.dram_base
+		phys_addr: riscv.dram_base
+		size: riscv.dram_size
+		perms: memory.pte_r | memory.pte_w | memory.pte_x
+	},
+	MemoryRegion{
+		virt_addr: riscv.uart0_base
+		phys_addr: riscv.uart0_base
+		size: riscv.uart_size
+		perms: memory.pte_r | memory.pte_w
+	}
+]
 
-fn map_kernel(pagetable memory.Pagetable) {
-	pagetable.map_pages(0x8000_0000, 1024 * 1024, 0x8000_0000, memory.pte_r | memory.pte_w | memory.pte_x)
-	pagetable.map_pages(0x1000_0000, 4096, 0x1000_0000, memory.pte_r | memory.pte_w)
+pub struct Kernel {
+pub mut:
+	uart0 Uart
+	frame_allocator FrameAllocator
+	pagetable Pagetable
+	scheduler Scheduler
+	dispatcher Dispatcher
 }
 
-@[export: "kmain"]
-fn kmain() {
-	Uart.puts("Hello, World\n")
+pub fn Kernel.boot() {
+	kernel.frame_allocator.init()
 
-	kmem.init()
+	kernel.pagetable = Pagetable.new() or {
+		panic("Failed to create kernel pagetable")
+	}
+	kernel.map_kernel()
 
-	kernel_pagetable = memory.Pagetable.new()
-	memset(voidptr(kernel_pagetable), 0, riscv.page_size)
-	map_kernel(kernel_pagetable)
-	riscv.w_satp(1 << 31 | kernel_pagetable.to_ppn())
-
-	Uart.puts("Switched to kernel pagetable\n")
-
-	stack_page := kmem.alloc()
-	kernel_stack_top := voidptr(u32(stack_page) + kstack_size - 16)
-	riscv.w_mscratch(u32(kernel_stack_top))
-	riscv.call_with_stack(kernel_stack_top, kernel_main)
+	init_process := Process.new(1) or {
+		panic("Failed to create init process")
+	}
+	kernel.scheduler.enqueue(init_process)
 }
 
-fn kernel_main() {
-	Uart.puts("Running on kernel stack\n")
-
-	mut proc0 := Process.new(1) or {
-		Uart.puts("Process alloc failed\n")
-		return
+pub fn (k &Kernel) map_kernel() {
+	for region in kernel_regions {
+		k.pagetable.map_region(region.virt_addr, region.size, region.phys_addr, region.perms)
 	}
-	Uart.puts("proc0 allocated\n")
+}
 
-	user_code := kmem.alloc()
-	if user_code == voidptr(0) {
-		Uart.puts("user_code alloc failed\n")
-		return
-	}
-	user_stack := kmem.alloc()
-	if user_stack == voidptr(0) {
-		Uart.puts("user_stack alloc failed\n")
-		return
-	}
-
-	unsafe {
-		code := &u32(user_code)
-		code[0] = 0x00000513 // li a0, 0
-		code[1] = 0x00000073 // ecall
-		code[2] = 0x00000073 // ecall
-		code[3] = 0x00000073 // ecall
-		code[4] = 0x00000073 // ecall
-		code[5] = 0x0000006f // j .
-	}
-
-	user_code_va := u32(0x0000_0000)
-	user_stack_va := u32(0x0000_1000)
-
-	proc0.pagetable = memory.Pagetable.new()
-	memset(voidptr(proc0.pagetable), 0, riscv.page_size)
-	map_kernel(proc0.pagetable)
-	proc0.pagetable.map_pages(user_code_va, riscv.page_size, u32(user_code), memory.pte_r | memory.pte_x | memory.pte_u)
-	proc0.pagetable.map_pages(user_stack_va, riscv.page_size, u32(user_stack), memory.pte_r | memory.pte_w | memory.pte_u)
-
-	proc0.trapframe.epc = user_code_va
-	proc0.trapframe.sp = user_stack_va + riscv.page_size
-
-	Uart.puts("Entering user mode\n")
-	riscv.w_mscratch(u32(proc0.kernel_sp))
-	riscv.w_satp(1 << 31 | proc0.pagetable.to_ppn())
-	trap_return(mut proc0.trapframe)
-
-	mut i := 0
+pub fn (mut k Kernel) run() {
+	mut last_pid := u32(0)
 
 	for {
-		i += 1
-		if i % 1_000_000 == 0 {
-			Uart.puts("Cycle\n")
-		}
-	}
-}
+		// TODO: disable interrerupts
 
-fn main() {
-	kmain()
+		mut next_process := k.scheduler.pick_next(last_pid) or {
+			// TODO: enable interrupts & wait for interrupt: wfi
+			continue
+		}
+
+		last_pid = next_process.pid
+		k.dispatcher.switch_to(mut next_process)
+
+		// TODO: enable interrupts
+	}
 }

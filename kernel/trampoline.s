@@ -1,19 +1,17 @@
 .section .text.trampoline
 
 .global trap_vector
+.global trap_return
 
 .align 4
 trap_vector:
     csrrw sp, mscratch, sp
-    addi sp, sp, -128
-
     sw t0, 16(sp)
+    csrr t0, mscratch
+    sw t0, 4(sp)
 
     csrr t0, mepc
     sw t0, 124(sp)
-
-    addi t0, sp, 128
-    sw t0, 4(sp)
 
     sw ra, 0(sp)
     sw gp, 8(sp)
@@ -52,9 +50,15 @@ trap_vector:
 
     mv a0, sp
     call trap_handler
+    mv a0, sp
+
+trap_return:
+    mv sp, a0
 
     lw t0, 124(sp)
     csrw mepc, t0
+
+    csrw mscratch, sp
 
     lw ra, 0(sp)
 
@@ -94,8 +98,6 @@ trap_vector:
 
     lw t0, 16(sp)
 
-    addi sp, sp, 128
-
-    csrrw sp, mscratch, sp
+    lw sp, 4(sp)
 
     mret

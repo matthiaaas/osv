@@ -1,50 +1,39 @@
-@[has_globals]
 module memory
 
 import riscv
 
 fn C.__kernel_end()
 
-__global (
-	kmem Kmem
-)
-
-pub const phystop = 0x80000000 + 1 * 1024 * 1024 // 1MB
-
-@[noinit]
-struct Run {
+struct FreeFrame {
 mut:
-	next &Run
+	next &FreeFrame
 }
 
 @[noinit]
-pub struct Kmem {
+pub struct FrameAllocator {
 mut:
-	free_list &Run
+	free_frames &FreeFrame
 }
 
-pub fn (mut self Kmem) init() {
-	kernel_end := riscv.pgroundup(u32(voidptr(C.__kernel_end)))
-
-	for i := kernel_end; i < phystop; i += riscv.page_size {
-		self.kfree(voidptr(i))
+pub fn (mut allocator FrameAllocator) init() {
+	kernel_end := PhysAddr(u32(voidptr(C.__kernel_end))).page_up()
+	for frame_addr := kernel_end; frame_addr < riscv.phystop; frame_addr += riscv.page_size {
+		allocator.deallocate(frame_addr)
 	}
 }
 
-pub fn (mut self Kmem) alloc() voidptr {
-	if self.free_list == voidptr(0) {
-		return voidptr(0)
+pub fn (mut allocator FrameAllocator) allocate() ?PhysAddr {
+	if allocator.free_frames == unsafe { nil } {
+		return none
 	}
-	r := self.free_list
-	self.free_list = r.next
-	memset(r, 0, riscv.page_size)
-	return voidptr(r)
+	frame := allocator.free_frames
+	allocator.free_frames = frame.next
+	memset(frame, 0, riscv.page_size)
+	return PhysAddr(voidptr(frame))
 }
 
-pub fn (mut self Kmem) kfree(pa voidptr) {
-	unsafe {
-		r := &Run(voidptr(pa))
-		r.next = self.free_list
-		self.free_list = r
-	}
+pub fn (mut allocator FrameAllocator) deallocate(phys_addr PhysAddr) {
+	mut frame := unsafe { &FreeFrame(voidptr(phys_addr)) }
+	frame.next = allocator.free_frames
+	allocator.free_frames = frame
 }

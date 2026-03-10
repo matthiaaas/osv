@@ -44,7 +44,7 @@ pub fn bare_panic(msg string) {
 pub fn __malloc(n usize) voidptr {
     unsafe {
         if heap_ptr == 0 {
-            heap_ptr = heap_base
+            heap_ptr = 0x8008_0000
         }
         ptr := voidptr(heap_ptr)
         heap_ptr += n

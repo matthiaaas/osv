@@ -22,8 +22,12 @@ SECTIONS
     *(.data)
   } > ram
 
-  .bss : {
+  .bss (NOLOAD) : {
+    __bss_start = .;
     *(.bss)
+    *(COMMON)
+    . = ALIGN(4);
+    __bss_end = .;
   } > ram
 
   .stack : {

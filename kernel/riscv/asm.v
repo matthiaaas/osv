@@ -68,9 +68,9 @@ pub fn w_satp(satp u32) {
 	}
 }
 
+fn C.trap_return(trapframe voidptr)
+
 @[inline]
-pub fn mret() {
-	asm rv32 {
-		mret
-	}
+pub fn trap_return(trapframe voidptr) {
+    C.trap_return(trapframe)
 }
