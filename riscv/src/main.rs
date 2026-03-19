@@ -1,23 +1,20 @@
-mod bus;
 mod cpu;
 mod csrs;
-mod dram;
+mod debug;
+mod devices;
 mod instructions;
 mod isa;
 mod profiling;
 mod regs;
 mod trap;
-mod uart;
 
 use goblin::elf::{self, program_header};
 use std::fs;
 use std::path::Path;
 
-use crate::bus::Bus;
 use crate::cpu::Cpu;
-use crate::dram::Dram;
+use crate::devices::{Bus, Disk, Dram, Uart};
 use crate::profiling::IpsMonitor;
-use crate::uart::Uart;
 
 fn load_elf_into_ram(filename: &str, ram: &mut Dram, base_addr: u32) -> Result<(), String> {
     let filepath = Path::new(filename);
@@ -45,12 +42,20 @@ fn main() {
     let uart0 = Uart::new();
 
     let mut ram = Dram::new(1024 * 1024); // 1 MB RAM
-    load_elf_into_ram("../kernel/target/kernel.elf", &mut ram, 0x8000_0000)
-        .expect("Failed to load kernel ELF into RAM");
+    load_elf_into_ram(
+        "/Users/matthias/Documents/private/projects/osv/kernel/target/kernel.elf",
+        &mut ram,
+        0x8000_0000,
+    )
+    .expect("Failed to load kernel ELF into RAM");
+
+    let disk = Disk::new("/Users/matthias/Documents/private/projects/osv/kernel/target/disk")
+        .expect("Failed to load disk file.");
 
     let mut bus = Bus::new();
     bus.map_to(0x8000_0000, Box::new(ram));
     bus.map_to(0x1000_0000, Box::new(uart0));
+    bus.map_to(0x1000_1000, Box::new(disk));
 
     let mut cpu = Cpu::new(bus, None);
 

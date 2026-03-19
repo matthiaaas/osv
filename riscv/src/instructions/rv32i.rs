@@ -1,4 +1,8 @@
-use crate::{cpu::Cpu, isa::Instr, trap::Trap};
+use crate::{
+    cpu::Cpu,
+    isa::Instr,
+    trap::{Exception, Trap},
+};
 
 pub fn exec_op_imm(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
     let i = instr.as_i_type();
@@ -72,11 +76,11 @@ pub fn exec_op_imm(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
                     let res = (rs1_val >> shamt) as u32;
                     cpu.reg_file.write(i.rd(), res);
                 }
-                _ => return Err(Trap::IllegalInstruction(instr)),
+                _ => return Err(Trap::Exception(Exception::IllegalInstruction(instr))),
             }
             Ok(())
         }
-        _ => Err(Trap::IllegalInstruction(instr)),
+        _ => Err(Trap::Exception(Exception::IllegalInstruction(instr))),
     }
 }
 
@@ -105,7 +109,7 @@ pub fn exec_op_reg(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
                     cpu.reg_file.write(r.rd(), res);
                     Ok(())
                 }
-                _ => Err(Trap::IllegalInstruction(instr)),
+                _ => Err(Trap::Exception(Exception::IllegalInstruction(instr))),
             }
         }
         0b001 => {
@@ -162,7 +166,7 @@ pub fn exec_op_reg(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
                     cpu.reg_file.write(r.rd(), res);
                     Ok(())
                 }
-                _ => Err(Trap::IllegalInstruction(instr)),
+                _ => Err(Trap::Exception(Exception::IllegalInstruction(instr))),
             }
         }
         0b110 => {
@@ -177,7 +181,7 @@ pub fn exec_op_reg(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
             cpu.reg_file.write(r.rd(), res);
             Ok(())
         }
-        _ => Err(Trap::IllegalInstruction(instr)),
+        _ => Err(Trap::Exception(Exception::IllegalInstruction(instr))),
     }
 }
 
@@ -283,7 +287,7 @@ pub fn exec_branch(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
             }
             Ok(())
         }
-        _ => Err(Trap::IllegalInstruction(instr)),
+        _ => Err(Trap::Exception(Exception::IllegalInstruction(instr))),
     }
 }
 
@@ -335,7 +339,7 @@ pub fn exec_load(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
             cpu.reg_file.write(i.rd(), value);
             Ok(())
         }
-        _ => Err(Trap::IllegalInstruction(instr)),
+        _ => Err(Trap::Exception(Exception::IllegalInstruction(instr))),
     }
 }
 
@@ -367,6 +371,6 @@ pub fn exec_store(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
             cpu.bus.store(phys_addr, 4, data)?;
             Ok(())
         }
-        _ => Err(Trap::IllegalInstruction(instr)),
+        _ => Err(Trap::Exception(Exception::IllegalInstruction(instr))),
     }
 }

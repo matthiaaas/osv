@@ -11,7 +11,7 @@
 
 # Code
 
-- Code snippets in your answers are appreciated, as well as code reviews of my work.
+- Code snippets in your answers are HIGHLY appreciated, as well as code reviews of my work.
 - Always explain the code you provide, and make sure to break it down into small, digestible example-driven pieces.
 - Only use comments to describe extreme detail behavior or to articulate strictly necessary ideas in a hyper concise manner.
 - Do NOT put slop comments all over the place.

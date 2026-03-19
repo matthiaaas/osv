@@ -1,4 +1,8 @@
-use crate::{cpu::Cpu, isa::Instr, trap::Trap};
+use crate::{
+    cpu::Cpu,
+    isa::Instr,
+    trap::{Exception, Trap},
+};
 
 pub fn exec_csr(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
     let i = instr.as_i_type();
@@ -13,11 +17,11 @@ pub fn exec_csr(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
             let csr_val = cpu
                 .csr_file
                 .read(csr_addr)
-                .map_err(|_| Trap::IllegalInstruction(instr))?;
+                .map_err(|_| Trap::Exception(Exception::IllegalInstruction(instr)))?;
             let rs1_val = cpu.reg_file.read(rs1);
             cpu.csr_file
                 .write(csr_addr, rs1_val)
-                .map_err(|_| Trap::IllegalInstruction(instr))?;
+                .map_err(|_| Trap::Exception(Exception::IllegalInstruction(instr)))?;
             cpu.reg_file.write(rd, csr_val);
             Ok(())
         }
@@ -26,12 +30,12 @@ pub fn exec_csr(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
             let csr_val = cpu
                 .csr_file
                 .read(csr_addr)
-                .map_err(|_| Trap::IllegalInstruction(instr))?;
+                .map_err(|_| Trap::Exception(Exception::IllegalInstruction(instr)))?;
             let rs1_val = cpu.reg_file.read(rs1);
             let new_csr_val = csr_val | rs1_val;
             cpu.csr_file
                 .write(csr_addr, new_csr_val)
-                .map_err(|_| Trap::IllegalInstruction(instr))?;
+                .map_err(|_| Trap::Exception(Exception::IllegalInstruction(instr)))?;
             cpu.reg_file.write(rd, csr_val);
             Ok(())
         }
@@ -40,15 +44,15 @@ pub fn exec_csr(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
             let csr_val = cpu
                 .csr_file
                 .read(csr_addr)
-                .map_err(|_| Trap::IllegalInstruction(instr))?;
+                .map_err(|_| Trap::Exception(Exception::IllegalInstruction(instr)))?;
             let rs1_val = cpu.reg_file.read(rs1);
             let new_csr_val = csr_val & !rs1_val;
             cpu.csr_file
                 .write(csr_addr, new_csr_val)
-                .map_err(|_| Trap::IllegalInstruction(instr))?;
+                .map_err(|_| Trap::Exception(Exception::IllegalInstruction(instr)))?;
             cpu.reg_file.write(rd, csr_val);
             Ok(())
         }
-        _ => Err(Trap::IllegalInstruction(instr)),
+        _ => Err(Trap::Exception(Exception::IllegalInstruction(instr))),
     }
 }

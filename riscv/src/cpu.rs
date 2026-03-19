@@ -1,10 +1,10 @@
-use crate::bus::Bus;
 use crate::csrs::CsrFile;
+use crate::devices::Bus;
 use crate::instructions::{privileged, rv32i, zicsr};
 use crate::isa::opcodes::{AUIPC, BRANCH, JAL, JALR, LOAD, LUI, OP_IMM, OP_REG, STORE, SYSTEM};
 use crate::isa::{INSTRUCTION_SIZE, Instr, PrivilegeMode};
 use crate::regs::RegFile;
-use crate::trap::Trap;
+use crate::trap::{Exception, Trap};
 
 const DEFAULT_RESET_VECTOR: u32 = 0x8000_0000;
 
@@ -57,7 +57,7 @@ impl Cpu {
                     zicsr::exec_csr(self, instr)
                 }
             }
-            _ => Err(Trap::IllegalInstruction(instr)),
+            _ => Err(Trap::Exception(Exception::IllegalInstruction(instr))),
         }
     }
 

@@ -62,6 +62,12 @@ impl Bus {
         }
     }
 
+    pub fn dump(&mut self, addr: u32, len: u32) -> Result<Vec<u8>, BusError> {
+        (0..len)
+            .map(|off| self.load(addr.wrapping_add(off), 1).map(|v| v as u8))
+            .collect()
+    }
+
     fn probe(&mut self, addr: u32) -> Result<&mut MappedDevice, ()> {
         for mapping in &mut self.mappings {
             if addr >= mapping.base_addr && addr < mapping.base_addr + mapping.device.size() {

@@ -1,7 +1,8 @@
 module proc
 
 pub struct Scheduler {
-mut:
+pub mut:
+	curr_pid u32
 	processes [64]Process
 }
 
@@ -14,8 +15,8 @@ fn (scheduler &Scheduler) index_of(pid u32) ?int {
 	return none
 }
 
-pub fn (scheduler &Scheduler) pick_next(last_pid u32) ?&Process {
-	start := if idx := scheduler.index_of(last_pid) {
+pub fn (mut scheduler Scheduler) pick_next() ?&Process {
+	start := if idx := scheduler.index_of(scheduler.curr_pid) {
 		(idx + 1) % scheduler.processes.len
 	} else {
 		0
@@ -23,9 +24,10 @@ pub fn (scheduler &Scheduler) pick_next(last_pid u32) ?&Process {
 
 	for i in 0 .. scheduler.processes.len {
 		idx := (start + i) % scheduler.processes.len
-		process := unsafe { &scheduler.processes[idx]}
+		process := unsafe { &scheduler.processes[idx] }
 
 		if process.state == .ready {
+			scheduler.curr_pid = process.pid
 			return process
 		}
 	}
@@ -42,4 +44,9 @@ pub fn (mut scheduler Scheduler) enqueue(process Process) {
 	}
 
 	panic("No space for new process")
+}
+
+pub fn (mut scheduler Scheduler) current() ?&Process {
+	curr_idx := scheduler.index_of(scheduler.curr_pid)?
+	return unsafe { &scheduler.processes[curr_idx] }
 }

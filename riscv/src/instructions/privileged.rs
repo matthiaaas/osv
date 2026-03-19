@@ -1,7 +1,7 @@
 use crate::{
     cpu::Cpu,
     isa::{Instr, PrivilegeMode},
-    trap::Trap,
+    trap::{Exception, Trap},
 };
 
 pub fn is_privileged(instr: Instr) -> bool {
@@ -15,7 +15,7 @@ pub fn exec_privileged(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
     match funct12 {
         0x000 => {
             // ECALL
-            Err(Trap::EnvironmentCall(cpu.priv_mode))
+            Err(Trap::Exception(Exception::EnvironmentCall(cpu.priv_mode)))
         }
         0x302 => {
             // MRET
@@ -28,6 +28,6 @@ pub fn exec_privileged(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
 
             Ok(())
         }
-        _ => Err(Trap::IllegalInstruction(instr)),
+        _ => Err(Trap::Exception(Exception::IllegalInstruction(instr))),
     }
 }

@@ -8,8 +8,6 @@ fn C._vinit(argc int, argv voidptr)
 fn kmain() {
 	C._vinit(0, unsafe { nil })
 
-	kernel.uart0.puts("Hello, World\n")
-
 	Kernel.boot()
 
 	kernel.run()

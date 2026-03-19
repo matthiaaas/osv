@@ -2,6 +2,7 @@ module proc
 
 import riscv
 import memory { Pagetable, VirtAddr, PhysAddr }
+import vfs { GlobalFileTableIndex }
 
 pub enum ProcessState {
 	unused
@@ -18,8 +19,8 @@ pub mut:
 	state ProcessState
 	pagetable Pagetable
 	trapframe TrapFrame
+	file_descriptors [64]GlobalFileTableIndex
 	// kernel_sp u32
-	// file_descriptors []File
 }
 
 pub fn Process.new(pid u32) ?Process {
@@ -40,7 +41,6 @@ pub fn Process.new(pid u32) ?Process {
 
 	user_code_frame := kernel.frame_allocator.allocate()?
 	user_code_virt_addr := VirtAddr(0x1000)
-
 	pagetable.map_region(
 		user_code_virt_addr,
 		riscv.page_size,

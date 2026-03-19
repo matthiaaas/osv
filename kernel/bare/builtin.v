@@ -5,8 +5,8 @@ module builtin
 
 pub type va_list = voidptr
 
-const uart_base = usize(0x1000_0000) 
-const heap_base = usize(0x8008_0000)
+const uart_base = usize(0x1000_0000)
+const page_size = usize(4096)
 
 __global (
     heap_ptr usize
@@ -14,7 +14,7 @@ __global (
 
 fn mmio_write(reg usize, val u8) {
     unsafe {
-        ptr := &u8(reg)
+        volatile ptr := &u8(reg)
         *ptr = val
     }
 }
@@ -40,20 +40,69 @@ pub fn bare_panic(msg string) {
     __exit(1)
 }
 
-@[export: "malloc"]
-pub fn __malloc(n usize) voidptr {
+struct MallocHeader {
+pub mut:
+    size usize
+    page_count usize
+}
+
+fn C.kalloc_pages(page_count usize) voidptr
+fn C.kfree_pages(base voidptr, page_count usize)
+
+fn C.__kernel_tmp_heap_start()
+fn C.__kernel_tmp_heap_end()
+
+fn malloc_bump(n usize) voidptr {
     unsafe {
         if heap_ptr == 0 {
-            heap_ptr = 0x8008_0000
+            heap_ptr = usize(voidptr(C.__kernel_tmp_heap_start))
         }
-        ptr := voidptr(heap_ptr)
+        heap_end := usize(voidptr(C.__kernel_tmp_heap_end))
+        if heap_ptr + n > heap_end {
+            panic("__malloc: temporary kernel bump heap allocator exhausted")
+        }
+        start := heap_ptr
         heap_ptr += n
-        return ptr
+        return voidptr(start)
+    }
+}
+
+@[export: "malloc"]
+pub fn __malloc(n usize) voidptr {
+    total := n + sizeof(MallocHeader)
+    page_count := (total + page_size - 1) / page_size
+    base := C.kalloc_pages(page_count)
+
+    unsafe {
+        if base == 0 {
+            bump_base := malloc_bump(total)
+            header := &MallocHeader(bump_base)
+            header.size = n
+            header.page_count = 0
+            return voidptr(usize(bump_base) + sizeof(MallocHeader))
+        }
+
+        header := &MallocHeader(base)
+        header.size = n
+        header.page_count = page_count
+        return voidptr(usize(base) + sizeof(MallocHeader))
     }
 }
 
 @[export: "free"]
-pub fn __free(ptr voidptr) {}
+pub fn __free(ptr voidptr) {
+    if ptr == 0 {
+        return
+    }
+
+    unsafe {
+        header_ptr := usize(ptr) - sizeof(MallocHeader)
+        header := &MallocHeader(voidptr(header_ptr))
+        if header.page_count > 0 {
+            C.kfree_pages(voidptr(header_ptr), header.page_count)
+        }
+    }
+}
 
 @[export: "calloc"]
 pub fn __calloc(nmemb usize, size usize) voidptr {
@@ -69,10 +118,22 @@ pub fn realloc(old_area voidptr, new_size usize) voidptr {
         return __malloc(new_size)
     }
     if new_size == 0 {
+        __free(old_area)
         return voidptr(0)
     }
+
+    mut copy_size := new_size
+    unsafe {
+        header_ptr := usize(old_area) - sizeof(MallocHeader)
+        old_header := &MallocHeader(voidptr(header_ptr))
+        if old_header.size < copy_size {
+            copy_size = old_header.size
+        }
+    }
+
     new_ptr := __malloc(new_size)
-    unsafe { memcpy(new_ptr, old_area, new_size) }
+    unsafe { memcpy(new_ptr, old_area, copy_size) }
+    __free(old_area)
     return new_ptr
 }
 

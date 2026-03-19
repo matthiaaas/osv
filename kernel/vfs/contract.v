@@ -1,3 +1,7 @@
+// https://gemini.google.com/app/f32c6f0f21066d0f
+
+module vfs
+
 pub interface Inode {
 	number()
 	mode()
@@ -19,26 +23,27 @@ pub interface File {
 	close() !
 }
 
-pub struct OpenFile /* satisfies File */ {
-	inode Inode
-	pos u32
-	flags u32
-}
-
-pub fn (open_file OpenFile) read(length u32) !u32 {
-	return open_file.inode.read()
-}
-
-pub struct Pipe /* satisfies File */ {
-	buffer     [4096]u8
-    read_pos u32
-	write_pos u32
-}
-
-// pub struct Process {
-// pub:
-// 	pid u32
-// mut:
-// 	...
-// 	file_descriptors []File
+// pub struct OpenFile /* satisfies File */ {
+// 	inode Inode
+// 	position u32
+// 	flags u32
 // }
+
+// pub fn (open_file OpenFile) read(length u32) !u32 {
+// 	return open_file.inode.read()
+// }
+
+// pub struct Pipe /* satisfies File */ {
+// 	buffer     [4096]u8
+//     read_pos u32
+// 	write_pos u32
+// }
+
+// pub struct Kernel {
+// 	// ...
+
+// mut:
+// 	global_files [64]File
+// }
+
+pub type GlobalFileTableIndex = u32

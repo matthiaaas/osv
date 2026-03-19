@@ -2,7 +2,7 @@ module memory
 
 import riscv
 
-pub type VirtAddr = u32
+pub type VirtAddr = usize
 
 @[inline]
 pub fn (virt_addr VirtAddr) page_down() VirtAddr {
@@ -24,7 +24,7 @@ pub fn (virt_addr VirtAddr) vpn0() u32 {
 	return (u32(virt_addr) >> 12) & 0x3ff
 }
 
-pub type PhysAddr = u32
+pub type PhysAddr = usize
 
 @[inline]
 pub fn (phys_addr PhysAddr) page_down() PhysAddr {

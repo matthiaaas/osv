@@ -28,7 +28,7 @@ pub fn (pagetable Pagetable) at(vpn u32) PagetableEntry {
 
 @[inline]
 pub fn (pagetable Pagetable) phys_addr() PhysAddr {
-	return PhysAddr(voidptr(pagetable))
+	return PhysAddr(usize(voidptr(pagetable)))
 }
 
 pub fn (pagetable Pagetable) walk(virt_addr VirtAddr, alloc bool) ?PagetableEntry {
@@ -72,10 +72,6 @@ pub fn (pagetable Pagetable) map_region(virt_addr VirtAddr, size u32, phys_addr 
 		curr_virt_addr += riscv.page_size
 		curr_phys_addr += riscv.page_size
 	}
-}
-
-pub fn (pagetable Pagetable) activate() {
-
 }
 
 @[inline]

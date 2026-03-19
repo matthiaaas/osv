@@ -1,4 +1,4 @@
-use crate::bus::{BusError, Device};
+use crate::devices::{BusError, Device};
 
 pub struct Dram {
     mem: Vec<u8>,

@@ -1,5 +1,6 @@
-use crate::bus::{BusError, Device};
 use std::io::{self, Write};
+
+use crate::devices::{BusError, Device};
 
 pub struct Uart {}
 

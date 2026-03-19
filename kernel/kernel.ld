@@ -38,5 +38,10 @@ SECTIONS
   } > ram
 
   . = ALIGN(4K);
+  PROVIDE(__kernel_tmp_heap_start = .);
+  . += 16K;
+  PROVIDE(__kernel_tmp_heap_end = .);
+
+  . = ALIGN(4K);
   PROVIDE(__kernel_end = .);
 }
