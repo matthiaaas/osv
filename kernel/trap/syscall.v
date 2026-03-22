@@ -1,4 +1,4 @@
-module syscall
+module trap
 
 import proc { TrapFrame }
 
