@@ -5,6 +5,6 @@ pub enum TfsFileType as u32 {
 	directory
 }
 
-pub struct TfsInode /* satisfies Inode */ {
-
+pub struct TfsInode {
+	// satisfies Inode
 }

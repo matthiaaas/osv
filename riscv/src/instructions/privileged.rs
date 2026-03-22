@@ -1,5 +1,6 @@
 use crate::{
     cpu::Cpu,
+    isa::opcodes::SFENCE_VMA_FUNCT7,
     isa::{Instr, PrivilegeMode},
     trap::{Exception, Trap},
 };
@@ -9,6 +10,18 @@ pub fn is_privileged(instr: Instr) -> bool {
 }
 
 pub fn exec_privileged(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
+    if instr.funct3() == 0b000 && instr.funct7() == SFENCE_VMA_FUNCT7 {
+        // SFENCE.VMA
+        let r = instr.as_r_type();
+        if r.rd() != 0 {
+            return Err(Trap::Exception(Exception::IllegalInstruction(instr)));
+        }
+        if cpu.priv_mode == PrivilegeMode::User {
+            return Err(Trap::Exception(Exception::IllegalInstruction(instr)));
+        }
+        return Ok(());
+    }
+
     let i = instr.as_i_type();
     let funct12 = i.imm() as u32;
 

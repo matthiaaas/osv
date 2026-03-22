@@ -23,14 +23,14 @@ pub mut:
 	a6 u32
 	a7 u32
 
-	s2 u32
-	s3 u32
-	s4 u32
-	s5 u32
-	s6 u32
-	s7 u32
-	s8 u32
-	s9 u32
+	s2  u32
+	s3  u32
+	s4  u32
+	s5  u32
+	s6  u32
+	s7  u32
+	s8  u32
+	s9  u32
 	s10 u32
 	s11 u32
 

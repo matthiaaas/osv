@@ -45,4 +45,3 @@ fn (phys_addr PhysAddr) to_ppn() u32 {
 fn ppn_to_pa(ppn u32) PhysAddr {
 	return PhysAddr((ppn >> 10) << 12)
 }
-

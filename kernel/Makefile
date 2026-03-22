@@ -67,4 +67,7 @@ hexdump: $(BUILD_DIR)/kernel.elf
 clean:
 	rm -rf $(BUILD_DIR)
 
-.PHONY: all readelf objdump hexdump clean
+format:
+	$(V) fmt -w .
+
+.PHONY: all readelf objdump hexdump clean format

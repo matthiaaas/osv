@@ -4,7 +4,7 @@ module main
 
 fn C._vinit(argc int, argv voidptr)
 
-@[export: "kmain"]
+@[export: 'kmain']
 fn kmain() {
 	C._vinit(0, unsafe { nil })
 

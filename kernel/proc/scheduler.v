@@ -2,7 +2,7 @@ module proc
 
 pub struct Scheduler {
 pub mut:
-	curr_pid u32
+	curr_pid  u32
 	processes [64]Process
 }
 
@@ -50,7 +50,7 @@ pub fn (mut scheduler Scheduler) enqueue(process Process) {
 		}
 	}
 
-	panic("No space for new process")
+	panic('No space for new process')
 }
 
 pub fn (mut scheduler Scheduler) current() ?&Process {

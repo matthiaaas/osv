@@ -1,11 +1,11 @@
 module loader
 
-import memory { VirtAddr, Pagetable }
+import memory { Pagetable, VirtAddr }
 import riscv
 
 pub struct LoadedProgram {
 pub:
-	entry VirtAddr
+	entry     VirtAddr
 	stack_top VirtAddr
 }
 
@@ -23,37 +23,27 @@ pub fn BuiltinStubLoader.new() BuiltinStubLoader {
 
 pub fn (_l BuiltinStubLoader) load(mut pagetable Pagetable) !LoadedProgram {
 	code_frame := kernel.frame_allocator.allocate() or {
-		return error("Failed to allocate code frame")
+		return error('Failed to allocate code frame')
 	}
 	code_virt_addr := VirtAddr(0x1000)
-	pagetable.map_region(
-		code_virt_addr,
-		riscv.page_size,
-		code_frame,
-		memory.pte_r | memory.pte_x | memory.pte_u
-	)!
+	pagetable.map_region(code_virt_addr, riscv.page_size, code_frame, memory.pte_r | memory.pte_x | memory.pte_u)!
 
 	stack_frame := kernel.frame_allocator.allocate() or {
-		return error("Failed to allocate stack frame")
+		return error('Failed to allocate stack frame')
 	}
 	stack_virt_addr := VirtAddr(0x2000)
-	pagetable.map_region(
-		stack_virt_addr,
-		riscv.page_size,
-		stack_frame,
-		memory.pte_r | memory.pte_w | memory.pte_u
-	)!
-	stack_top := u32(stack_frame) + riscv.page_size
+	pagetable.map_region(stack_virt_addr, riscv.page_size, stack_frame, memory.pte_r | memory.pte_w | memory.pte_u)!
+	stack_top := u32(stack_virt_addr) + riscv.page_size
 
 	unsafe {
 		code := &u32(voidptr(code_frame))
-		code[0] = 0x02a00513 // li a0, 42
+		code[0] = 0x0ac00893 // li a7, 172 (sys_getpid)
 		code[1] = 0x00000073 // ecall
-		code[2] = 0xffdff06f // j .-4  (loop back to ecall)
+		code[2] = 0x00a484b3 // add s1, s1, a0
+		code[3] = 0xff9ff06f // j .-8  (loop back to ecall)
 	}
-
 	return LoadedProgram{
-		entry: code_virt_addr
+		entry:     code_virt_addr
 		stack_top: VirtAddr(stack_top)
 	}
 }

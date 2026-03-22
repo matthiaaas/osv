@@ -12,3 +12,4 @@ pub const SYSTEM: u8 = 0x73;
 pub const FENCE: u8 = 0x0f;
 pub const FENCE_I: u8 = 0x0f;
 pub const ECALL: u32 = 0x00000073;
+pub const SFENCE_VMA_FUNCT7: u8 = 0b0001001;

@@ -42,17 +42,17 @@ pub fn (mut allocator FrameAllocator) allocate_contiguous(page_count usize) ?Phy
 	mut prev := first
 
 	for _ in 1 .. page_count {
-        next := allocator.allocate()?
+		next := allocator.allocate()?
 
-        if usize(next) + usize(riscv.page_size) != usize(prev) {
-            panic("frame allocator fragmented: contiguous run required")
-        }
+		if usize(next) + usize(riscv.page_size) != usize(prev) {
+			panic('frame allocator fragmented: contiguous run required')
+		}
 
-        lowest = next
-        prev = next
-    }
+		lowest = next
+		prev = next
+	}
 
-    return lowest
+	return lowest
 }
 
 pub fn (mut allocator FrameAllocator) deallocate(phys_addr PhysAddr) {

@@ -17,7 +17,7 @@ pub type Pagetable = &u32
 
 pub fn Pagetable.new() !Pagetable {
 	frame := kernel.frame_allocator.allocate() or {
-		return error("Failed to allocate pagetable frame")
+		return error('Failed to allocate pagetable frame')
 	}
 	return Pagetable(voidptr(frame))
 }
@@ -37,17 +37,15 @@ pub fn (pagetable Pagetable) walk(virt_addr VirtAddr, alloc bool) ?PagetableEntr
 	pte := pagetable.at(virt_addr.vpn1())
 
 	if pte.is_valid() {
-        subtable := pte.as_pagetable()
-        return subtable.at(virt_addr.vpn0())
-    }
+		subtable := pte.as_pagetable()
+		return subtable.at(virt_addr.vpn0())
+	}
 
 	if !alloc {
 		return none
 	}
 
-	subtable := Pagetable.new() or {
-		return none
-	}
+	subtable := Pagetable.new() or { return none }
 	pte.point_to(subtable.phys_addr(), 0)
 
 	return subtable.at(virt_addr.vpn0())
@@ -60,11 +58,11 @@ pub fn (pagetable Pagetable) map_region(virt_addr VirtAddr, size u32, phys_addr 
 
 	for {
 		pte := pagetable.walk(curr_virt_addr, true) or {
-			return error("map_region walk failed at ${curr_virt_addr}")
+			return error('map_region walk failed at ${curr_virt_addr}')
 		}
 
 		if pte.is_valid() {
-			return error("remap collision at ${curr_virt_addr}")
+			return error('remap collision at ${curr_virt_addr}')
 		}
 
 		pte.point_to(curr_phys_addr, perms)
@@ -95,10 +93,11 @@ pub fn (pte PagetableEntry) raw_value() u32 {
 	return unsafe { *(&u32(pte)) }
 }
 
-
 @[inline]
 fn (pte PagetableEntry) set(val u32) {
-	unsafe { *(&u32(pte)) = val }
+	unsafe {
+		*(&u32(pte)) = val
+	}
 }
 
 @[inline]
@@ -125,6 +124,6 @@ pub struct MemoryRegion {
 pub:
 	virt_addr VirtAddr
 	phys_addr PhysAddr
-	size u32
-	perms u32
+	size      u32
+	perms     u32
 }

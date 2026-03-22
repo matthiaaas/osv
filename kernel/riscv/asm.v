@@ -37,25 +37,9 @@ pub fn w_mstatus(val u32) {
 }
 
 @[inline]
-pub fn w_mepc(val u32) {
-	asm rv32 {
-		csrw mepc, a
-		; ; r (val) as a
-	}
-}
-
-@[inline]
 pub fn w_mtvec(val u32) {
 	asm rv32 {
 		csrw mtvec, a
-		; ; r (val) as a
-	}
-}
-
-@[inline]
-pub fn w_mscratch(val u32) {
-	asm rv32 {
-		csrw mscratch, a
 		; ; r (val) as a
 	}
 }
@@ -65,6 +49,13 @@ pub fn w_satp(satp u32) {
 	asm rv32 {
 		csrw satp, a
 		; ; r (satp) as a
+	}
+}
+
+@[inline]
+pub fn sfence_vma() {
+	asm rv32 {
+		sfence.vma
 	}
 }
 

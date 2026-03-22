@@ -4,20 +4,20 @@ import riscv
 import proc { TrapFrame }
 import syscall { handle_syscall }
 
-@[export: "trap_handler"]
+@[export: 'trap_handler']
 fn trap_handler(mut trapframe TrapFrame) {
 	mcause := riscv.r_mcause()
 
 	match mcause {
 		2 {
-			kernel.uart0.puts("Illegal Instruction\n")
+			kernel.uart0.puts('Illegal Instruction\n')
 			trapframe.epc += 4
 		}
 		8 {
-			handle_syscall(trapframe.a7)
+			handle_syscall(trapframe.a7, mut trapframe) or { panic('Failed to handle syscall') }
 
 			mut curr_process := kernel.scheduler.current() or {
-				panic("No current process in ecall trap")
+				panic('No current process in ecall trap')
 			}
 			curr_process.trapframe = trapframe
 			curr_process.trapframe.epc += 4
@@ -27,16 +27,16 @@ fn trap_handler(mut trapframe TrapFrame) {
 			}
 
 			mut next_process := kernel.scheduler.pick_next() or {
-				panic("No ready/runnable process after trap")
+				panic('No ready/runnable process after trap')
 			}
 			kernel.dispatcher.switch_to(mut next_process)
 		}
 		3 {
-			kernel.uart0.puts("Breakpoint\n")
+			kernel.uart0.puts('Breakpoint\n')
 			trapframe.epc += 4
 		}
 		else {
-			panic("Unhandled trap cause=${mcause}")
+			panic('Unhandled trap cause=${mcause}')
 		}
 	}
 }
