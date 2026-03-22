@@ -6,7 +6,10 @@
 .align 4
 trap_vector:
     csrrw sp, mscratch, sp
+	addi sp, sp, -128
+
     sw t0, 16(sp)
+
     csrr t0, mscratch
     sw t0, 4(sp)
 
@@ -51,6 +54,7 @@ trap_vector:
     mv a0, sp
     call trap_handler
     mv a0, sp
+	addi a1, sp, 128
 
 trap_return:
     mv sp, a0
@@ -58,7 +62,7 @@ trap_return:
     lw t0, 124(sp)
     csrw mepc, t0
 
-    csrw mscratch, sp
+	csrw mscratch, a1
 
     lw ra, 0(sp)
 

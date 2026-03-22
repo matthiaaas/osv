@@ -4,26 +4,12 @@ module main
 import riscv
 import devices { Uart }
 import proc { Process, Scheduler, Dispatcher }
-import memory { FrameAllocator, Pagetable, MemoryRegion, PhysAddr }
+import memory { FrameAllocator, Pagetable, PhysAddr, map_kernel_regions }
+import loader { BuiltinStubLoader }
 
 __global (
 	kernel Kernel
 )
-
-const kernel_regions := [
-	MemoryRegion{
-		virt_addr: riscv.dram_base
-		phys_addr: riscv.dram_base
-		size: riscv.dram_size
-		perms: memory.pte_r | memory.pte_w | memory.pte_x
-	},
-	MemoryRegion{
-		virt_addr: riscv.uart0_base
-		phys_addr: riscv.uart0_base
-		size: riscv.uart_size
-		perms: memory.pte_r | memory.pte_w
-	}
-]
 
 pub struct Kernel {
 pub mut:
@@ -41,32 +27,21 @@ pub fn Kernel.boot() {
 	kernel.pagetable = Pagetable.new() or {
 		panic("Failed to create kernel pagetable")
 	}
-	kernel.map_kernel()
+	map_kernel_regions(kernel.pagetable) or {
+		panic("Failed to map kernel")
+	}
 
-	init_process := Process.new(1) or {
-		panic("Failed to create init process")
+	stub_loader := BuiltinStubLoader.new()
+	init_process := Process.bootstrap(1, stub_loader) or {
+		panic("Failed to spawn init process")
 	}
 	kernel.scheduler.enqueue(init_process)
 
-	second_process := Process.new(2) or {
-		panic("Failed to create second process")
+	second_loader := BuiltinStubLoader.new()
+	second_process := Process.bootstrap(2, second_loader) or {
+		panic("Failed to spawn second process")
 	}
 	kernel.scheduler.enqueue(second_process)
-
-	for i in 0 .. 2 {
-		process := &kernel.scheduler.processes[i]
-		if process.pid == 1 {
-			kernel.uart0.puts("pid: 1\n")
-		} else if process.pid == 2 {
-			kernel.uart0.puts("pid: 2\n")
-		}
-	}
-}
-
-pub fn (k &Kernel) map_kernel() {
-	for region in kernel_regions {
-		k.pagetable.map_region(region.virt_addr, region.size, region.phys_addr, region.perms)
-	}
 }
 
 pub fn (mut k Kernel) run() {

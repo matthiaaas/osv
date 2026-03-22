@@ -41,7 +41,7 @@ pub fn (mut allocator FrameAllocator) allocate_contiguous(page_count usize) ?Phy
 	mut lowest := first
 	mut prev := first
 
-	for i in 1 .. page_count {
+	for _ in 1 .. page_count {
         next := allocator.allocate()?
 
         if usize(next) + usize(riscv.page_size) != usize(prev) {

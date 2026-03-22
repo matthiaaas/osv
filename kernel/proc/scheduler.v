@@ -15,6 +15,13 @@ fn (scheduler &Scheduler) index_of(pid u32) ?int {
 	return none
 }
 
+pub fn (scheduler &Scheduler) by_pid(pid u32) ?&Process {
+	if idx := scheduler.index_of(pid) {
+		return unsafe { &scheduler.processes[idx] }
+	}
+	return none
+}
+
 pub fn (mut scheduler Scheduler) pick_next() ?&Process {
 	start := if idx := scheduler.index_of(scheduler.curr_pid) {
 		(idx + 1) % scheduler.processes.len
@@ -47,6 +54,5 @@ pub fn (mut scheduler Scheduler) enqueue(process Process) {
 }
 
 pub fn (mut scheduler Scheduler) current() ?&Process {
-	curr_idx := scheduler.index_of(scheduler.curr_pid)?
-	return unsafe { &scheduler.processes[curr_idx] }
+	return scheduler.by_pid(scheduler.curr_pid)
 }

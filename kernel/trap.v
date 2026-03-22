@@ -2,6 +2,7 @@ module main
 
 import riscv
 import proc { TrapFrame }
+import syscall { handle_syscall }
 
 @[export: "trap_handler"]
 fn trap_handler(mut trapframe TrapFrame) {
@@ -13,23 +14,16 @@ fn trap_handler(mut trapframe TrapFrame) {
 			trapframe.epc += 4
 		}
 		8 {
-			kernel.uart0.puts("Environment Call (U)\n")
+			handle_syscall(trapframe.a7)
 
-			for i in 0 .. 2 {
-				process := &kernel.scheduler.processes[i]
-				if process.pid == 1 {
-					kernel.uart0.puts("pid: 1\n")
-				} else if process.pid == 2 {
-					kernel.uart0.puts("pid: 2\n")
-				}
+			mut curr_process := kernel.scheduler.current() or {
+				panic("No current process in ecall trap")
 			}
+			curr_process.trapframe = trapframe
+			curr_process.trapframe.epc += 4
 
-			if mut curr_process := kernel.scheduler.current() {
-				if curr_process.state == .running {
-					curr_process.state = .ready
-				}
-			} else {
-				trapframe.epc += 4 // fallback for now
+			if curr_process.state == .running {
+				curr_process.state = .ready
 			}
 
 			mut next_process := kernel.scheduler.pick_next() or {
@@ -42,7 +36,7 @@ fn trap_handler(mut trapframe TrapFrame) {
 			trapframe.epc += 4
 		}
 		else {
-			kernel.uart0.puts("Unknown Exception\n")
+			panic("Unhandled trap cause=${mcause}")
 		}
 	}
 }

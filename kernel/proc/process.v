@@ -1,7 +1,8 @@
 module proc
 
 import riscv
-import memory { Pagetable, VirtAddr, PhysAddr }
+import memory { Pagetable, VirtAddr, PhysAddr, map_kernel_regions }
+import loader { ProgramLoader }
 import vfs { GlobalFileTableIndex }
 
 pub enum ProcessState {
@@ -19,59 +20,47 @@ pub mut:
 	state ProcessState
 	pagetable Pagetable
 	trapframe TrapFrame
+	kernel_stack_top u32
 	file_descriptors [64]GlobalFileTableIndex
-	// kernel_sp u32
+	parent_pid ?u32
+	exit_status ?int
 }
 
-pub fn Process.new(pid u32) ?Process {
-	pagetable := Pagetable.new()?
-
-	pagetable.map_region(
-        VirtAddr(riscv.dram_base),
-        riscv.dram_size,
-        PhysAddr(riscv.dram_base),
-        memory.pte_r | memory.pte_w | memory.pte_x
-    )
-    pagetable.map_region(
-        VirtAddr(riscv.uart0_base),
-        riscv.uart_size,
-        PhysAddr(riscv.uart0_base),
-        memory.pte_r | memory.pte_w
-    )
-
-	user_code_frame := kernel.frame_allocator.allocate()?
-	user_code_virt_addr := VirtAddr(0x1000)
-	pagetable.map_region(
-		user_code_virt_addr,
-		riscv.page_size,
-		user_code_frame,
-		memory.pte_r | memory.pte_x | memory.pte_u
-	)
-
-	user_stack_frame := kernel.frame_allocator.allocate()?
-	user_stack_virt_addr := VirtAddr(0x2000)
-	pagetable.map_region(
-		user_stack_virt_addr,
-		riscv.page_size,
-		user_stack_frame,
-		memory.pte_r | memory.pte_w | memory.pte_u
-	)
-
-	unsafe {
-		code := &u32(voidptr(user_code_frame))
-        code[0] = 0x02a00513 // li a0, 42
-        code[1] = 0x00000073 // ecall
-        code[2] = 0xffdff06f // j .-4  (loop back to ecall)
-    }
-
+pub fn Process.new(
+	pid u32,
+	pagetable Pagetable,
+	program_counter VirtAddr,
+	stack_top VirtAddr,
+	kernel_stack_top u32,
+	parent_pid ?u32
+) Process {
 	return Process{
 		pid: pid
 		state: .ready
 		pagetable: pagetable
 		trapframe: TrapFrame{
-			epc: user_code_virt_addr
-			sp: user_stack_virt_addr + riscv.page_size
+			epc: program_counter
+			sp: stack_top
 		}
+		kernel_stack_top: kernel_stack_top
+		parent_pid: parent_pid
+		exit_status: none
 	}
 }
 
+
+pub fn Process.bootstrap(pid u32, l ProgramLoader) !Process {
+	mut pagetable := Pagetable.new()!
+
+	loaded_program := l.load(mut pagetable)!
+
+	kernel_stack_frame := kernel.frame_allocator.allocate() or {
+		return error("Failed to allocate kernel stack frame")
+	}
+	kernel_stack_top := u32(kernel_stack_frame) + riscv.page_size
+	map_kernel_regions(pagetable) or {
+		return error("Failed to map kernel")
+	}
+
+	return Process.new(pid, pagetable, loaded_program.entry, loaded_program.stack_top, kernel_stack_top, none)
+}

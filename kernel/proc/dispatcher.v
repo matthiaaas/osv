@@ -16,7 +16,7 @@ pub fn (mut dispatcher Dispatcher) switch_to(mut process Process) {
 
 	riscv.w_satp((1 << 31) | process.pagetable.to_ppn())
 
-    riscv.w_mscratch(u32(voidptr(&process.trapframe)))
+	riscv.w_mscratch(process.kernel_stack_top)
 
-    riscv.trap_return(&process.trapframe)
+	riscv.trap_return(&process.trapframe, process.kernel_stack_top)
 }

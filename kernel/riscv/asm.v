@@ -68,9 +68,9 @@ pub fn w_satp(satp u32) {
 	}
 }
 
-fn C.trap_return(trapframe voidptr)
+fn C.trap_return(trapframe voidptr, kernel_stack_top u32)
 
 @[inline]
-pub fn trap_return(trapframe voidptr) {
-    C.trap_return(trapframe)
+pub fn trap_return(trapframe voidptr, kernel_stack_top u32) {
+	C.trap_return(trapframe, kernel_stack_top)
 }
