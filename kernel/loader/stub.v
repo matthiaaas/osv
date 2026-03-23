@@ -3,16 +3,6 @@ module loader
 import memory { Pagetable, VirtAddr }
 import riscv
 
-pub struct LoadedProgram {
-pub:
-	entry     VirtAddr
-	stack_top VirtAddr
-}
-
-pub interface ProgramLoader {
-	load(mut pagetable Pagetable) !LoadedProgram
-}
-
 @[noinit]
 pub struct BuiltinStubLoader implements ProgramLoader {
 }

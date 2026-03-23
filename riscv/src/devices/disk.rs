@@ -33,7 +33,7 @@ impl Disk {
     }
 
     fn read(&mut self) {
-        let offset = self.data_ptr as u64 * SECTOR_SIZE as u64;
+        let offset = self.sector as u64 * SECTOR_SIZE as u64;
         if self.file.seek(SeekFrom::Start(offset)).is_ok() {
             let _ = self.file.read(&mut self.buffer);
         }
@@ -41,7 +41,7 @@ impl Disk {
     }
 
     fn write(&mut self) {
-        let offset = self.data_ptr as u64 * SECTOR_SIZE as u64;
+        let offset = self.sector as u64 * SECTOR_SIZE as u64;
         if self.file.seek(SeekFrom::Start(offset)).is_ok() {
             let _ = self.file.write_all(&self.buffer);
         }

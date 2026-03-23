@@ -30,6 +30,10 @@ pub fn handle_syscall(sysno u32, mut curr_process Process) !TrapDisposition {
 			kernel.scheduler.zombify(mut curr_process, int(curr_process.trapframe.a0))
 			return .terminate_curr
 		}
+		sys_yield {
+			curr_process.trapframe.a0 = 0
+			return .reschedule
+		}
 		else {
 			return error('Unimplemented syscall=${sysno}')
 		}

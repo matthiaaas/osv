@@ -8,13 +8,13 @@ pub enum TrapDisposition {
 	terminate_curr
 }
 
-pub enum TrapCause as u32 {
+pub enum ExceptionCause as u32 {
 	illegal_instruction = 2
 	breakpoint          = 3
 	environment_call    = 8
 }
 
-pub fn handle_exception(cause TrapCause, mut curr_process Process) TrapDisposition {
+pub fn handle_exception(cause ExceptionCause, mut curr_process Process) TrapDisposition {
 	match cause {
 		.illegal_instruction {
 			return .terminate_curr

@@ -1,14 +1,16 @@
 module proc
 
+pub const max_processes = 64
+
 pub struct Scheduler {
 pub mut:
 	curr_pid  u32
-	processes [64]Process
+	processes [max_processes]Process
 }
 
 fn (scheduler &Scheduler) index_of(pid u32) ?int {
-	for i, process in scheduler.processes {
-		if process.pid == pid {
+	for i in 0 .. scheduler.processes.len {
+		if scheduler.processes[i].pid == pid {
 			return i
 		}
 	}

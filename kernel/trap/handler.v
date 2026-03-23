@@ -6,7 +6,7 @@ import proc { TrapFrame }
 @[export: 'trap_handler']
 fn trap_handler(mut trapframe TrapFrame) {
 	mcause := riscv.r_mcause()
-	cause := TrapCause.from(mcause) or { panic('Unknown trap cause=${mcause}') }
+	cause := ExceptionCause.from(mcause) or { panic('Unknown trap cause=${mcause}') }
 
 	mut curr_process := kernel.scheduler.current() or { panic('No current process after trap') }
 	curr_process.trapframe = trapframe

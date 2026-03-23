@@ -3,7 +3,10 @@ module proc
 import riscv
 import memory { Pagetable, VirtAddr, map_kernel_regions }
 import loader { ProgramLoader }
-import vfs { GlobalFileTableIndex }
+
+const max_file_descriptors = 8
+
+type FileDescriptor = u32
 
 pub enum ProcessState {
 	unused
@@ -20,8 +23,8 @@ pub mut:
 	state            ProcessState
 	pagetable        Pagetable
 	trapframe        TrapFrame
+	file_descriptors [max_file_descriptors]FileDescriptor
 	kernel_stack_top u32
-	file_descriptors [64]GlobalFileTableIndex
 	parent_pid       ?u32
 	exit_status      ?int
 }

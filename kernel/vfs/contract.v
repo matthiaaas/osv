@@ -1,8 +1,9 @@
 // https://gemini.google.com/app/f32c6f0f21066d0f
 
+// REMOVABLE
 module vfs
 
-pub interface Inode {
+pub interface A__Inode {
 	number()
 	mode()
 	size()
@@ -16,7 +17,7 @@ pub interface Inode {
 	unlink()
 }
 
-pub interface File {
+pub interface A__File {
 	read(buf u32, length u32) !
 	write(buf u32, data []u8) !
 	seek(offset u32, whence u32) !u32
@@ -46,4 +47,4 @@ pub interface File {
 // 	global_files [64]File
 // }
 
-pub type GlobalFileTableIndex = u32
+pub type A__GlobalFileTableIndex = u32
