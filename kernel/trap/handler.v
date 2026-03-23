@@ -6,16 +6,12 @@ import proc { TrapFrame }
 @[export: 'trap_handler']
 fn trap_handler(mut trapframe TrapFrame) {
 	mcause := riscv.r_mcause()
-	cause := TrapCause.from(mcause) or {
-		panic('Unknown trap cause=${mcause}')
-	}
+	cause := TrapCause.from(mcause) or { panic('Unknown trap cause=${mcause}') }
 
-	mut curr_process := kernel.scheduler.current() or {
-		panic('No current process after trap')
-	}
+	mut curr_process := kernel.scheduler.current() or { panic('No current process after trap') }
 	curr_process.trapframe = trapframe
 
-	action := handle_exception(cause, mut trapframe)
+	action := handle_exception(cause, mut curr_process)
 
 	match action {
 		.resume_curr {
@@ -34,8 +30,10 @@ fn trap_handler(mut trapframe TrapFrame) {
 			kernel.dispatcher.switch_to(mut next_process)
 		}
 		.terminate_curr {
-			// TODO: kill process
-			panic('Terminating current process')
+			mut next_process := kernel.scheduler.pick_next() or {
+				panic('No ready/runnable process after trap')
+			}
+			kernel.dispatcher.switch_to(mut next_process)
 		}
 	}
 }

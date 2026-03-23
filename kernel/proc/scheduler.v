@@ -56,3 +56,8 @@ pub fn (mut scheduler Scheduler) enqueue(process Process) {
 pub fn (mut scheduler Scheduler) current() ?&Process {
 	return scheduler.by_pid(scheduler.curr_pid)
 }
+
+pub fn (mut scheduler Scheduler) zombify(mut process Process, exit_status int) {
+	process.state = .zombie
+	process.exit_status = exit_status
+}
