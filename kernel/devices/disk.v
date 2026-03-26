@@ -1,9 +1,10 @@
 module devices
 
 pub const disk0_base = u32(0x1000_1000)
-pub const disk0_size = u32(0x1000)
+pub const disk0_mmio_size = u32(0x1000)
+pub const disk0_size = u32(8 * 1024 * 1024) // 8 MB
 
-pub const disk0_sector_size = u32(512)
+pub const disk0_sector_size = u32(512) // bytes per sector
 
 const reg_ctrl = disk0_base + 0x00
 const reg_sector = disk0_base + 0x04
@@ -16,6 +17,7 @@ fn mmio_read_u32(addr u32) u32 {
 		return *ptr
 	}
 }
+
 fn mmio_write_u32(addr u32, val u32) {
 	unsafe {
 		volatile ptr := &u32(addr)
@@ -34,24 +36,24 @@ pub fn (disk Disk) sector_size() u32 {
 }
 
 pub fn (disk Disk) read(sector u32, mut buf [512]u8) ! {
-    assert buf.len >= disk0_sector_size
+	assert buf.len >= disk0_sector_size
 
-    mmio_write_u32(reg_sector, sector)
-    mmio_write_u32(reg_ctrl, 1)
+	mmio_write_u32(reg_sector, sector)
+	mmio_write_u32(reg_ctrl, 1)
 
-    for i in 0 .. disk0_sector_size {
-        buf[i] = u8(mmio_read_u32(reg_data))
-    }
+	for i in 0 .. disk0_sector_size {
+		buf[i] = u8(mmio_read_u32(reg_data))
+	}
 }
 
 pub fn (disk Disk) write(sector u32, mut buf [512]u8) ! {
-    assert buf.len >= disk0_sector_size
+	assert buf.len >= disk0_sector_size
 
-    mmio_write_u32(reg_sector, sector)
+	mmio_write_u32(reg_sector, sector)
 
-    for i in 0 .. disk0_sector_size {
-        mmio_write_u32(reg_data, buf[i])
-    }
+	for i in 0 .. disk0_sector_size {
+		mmio_write_u32(reg_data, buf[i])
+	}
 
-    mmio_write_u32(reg_ctrl, 2)
+	mmio_write_u32(reg_ctrl, 2)
 }

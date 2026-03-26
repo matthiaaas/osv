@@ -34,6 +34,20 @@ pub fn handle_syscall(sysno u32, mut curr_process Process) !TrapDisposition {
 			curr_process.trapframe.a0 = 0
 			return .reschedule
 		}
+		sys_openat {
+			path := unsafe { byteptr(curr_process.trapframe.a0).vstring() }
+
+			// mount_id, mount := kernel.vfs.resolve(path) or { return error('Failed to resolve path') }
+
+			return .reschedule
+		}
+		sys_read {
+			fd := curr_process.trapframe.a0
+			buf_ptr := curr_process.trapframe.a1
+			len := curr_process.trapframe.a2
+			// open_file := kernel.global_file_table.at(curr_process.file_descriptors[fd])
+			return .reschedule
+		}
 		else {
 			return error('Unimplemented syscall=${sysno}')
 		}

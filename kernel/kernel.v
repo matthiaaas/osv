@@ -6,7 +6,7 @@ import devices { Disk, Uart }
 import proc { Dispatcher, Process, Scheduler }
 import memory { FrameAllocator, Pagetable, PhysAddr }
 import loader { BuiltinStubLoader }
-import vfs { IndexedFileSystem, VirtualFileSystem }
+import vfs { VirtualFileSystem }
 
 __global (
 	kernel Kernel
@@ -14,24 +14,25 @@ __global (
 
 pub struct Kernel {
 pub mut:
-	uart0           Uart
-	disk0           Disk
-	frame_allocator FrameAllocator
-	pagetable       Pagetable
-	scheduler       Scheduler
-	dispatcher      Dispatcher
-	vfs             VirtualFileSystem
+	uart0             Uart
+	disk0             Disk
+	frame_allocator   FrameAllocator
+	pagetable         Pagetable
+	scheduler         Scheduler
+	dispatcher        Dispatcher
+	vfs               VirtualFileSystem
+	// global_file_table GlobalFileTable
 }
 
 pub fn Kernel.boot() {
 	kernel.frame_allocator.init()
 
-	root_fs := IndexedFileSystem.new(kernel.disk0)
-	root_fs.format() or { panic('Failed to format root filesystem') }
-	kernel.vfs.mount('/', root_fs) or { panic('Failed to mount root filesystem') }
+	// root_fs := IndexedFileSystem.new(kernel.disk0)
+	// root_fs.format() or { panic('Failed to format root filesystem') }
+	// kernel.vfs.mount('/', root_fs) or { panic('Failed to mount root filesystem') }
 
-	id, mount := kernel.vfs.resolve('/') or { panic('Failed to resolve root') }
-	kernel.uart0.puts('Root mounted at ${id} ${mount.prefix}')
+	// id, mount := kernel.vfs.resolve('/') or { panic('Failed to resolve root') }
+	// kernel.uart0.puts('Root mounted at ${id} ${mount.prefix}')
 
 	stub_loader := BuiltinStubLoader.new()
 	init_process := Process.bootstrap(1, stub_loader) or { panic('Failed to spawn init process') }
@@ -47,13 +48,11 @@ pub fn Kernel.boot() {
 pub fn (mut k Kernel) run() {
 	for {
 		// TODO: disable interrerupts
-
 		mut next_process := k.scheduler.pick_next() or {
 			// TODO: enable interrupts & wait for interrupt: wfi
 			continue
 		}
 		k.dispatcher.switch_to(mut next_process)
-
 		// TODO: enable interrupts
 	}
 }
