@@ -35,23 +35,23 @@ pub fn (disk Disk) sector_size() u32 {
 	return u32(disk0_sector_size)
 }
 
-pub fn (disk Disk) read(sector u32, mut buf [512]u8) ! {
-	assert buf.len >= disk0_sector_size
+pub fn (disk Disk) read(sector u32, mut buf []u8) ! {
+	assert buf.len <= disk0_sector_size
 
 	mmio_write_u32(reg_sector, sector)
 	mmio_write_u32(reg_ctrl, 1)
 
-	for i in 0 .. disk0_sector_size {
+	for i in 0 .. buf.len {
 		buf[i] = u8(mmio_read_u32(reg_data))
 	}
 }
 
-pub fn (disk Disk) write(sector u32, mut buf [512]u8) ! {
-	assert buf.len >= disk0_sector_size
+pub fn (disk Disk) write(sector u32, buf []u8) ! {
+	// assert buf.len <= disk0_sector_size
 
 	mmio_write_u32(reg_sector, sector)
 
-	for i in 0 .. disk0_sector_size {
+	for i in 0 .. buf.len {
 		mmio_write_u32(reg_data, buf[i])
 	}
 

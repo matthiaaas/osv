@@ -18,7 +18,7 @@ pub fn (mut v VirtualFileSystem) mount(prefix string, fs FileSystem) !MountId {
 	return error('No free mount slot')
 }
 
-pub fn (v &VirtualFileSystem) find_mount(path string) ?(MountId, &Mount) {
+fn (v &VirtualFileSystem) find_mount(path string) ?(MountId, &Mount) {
 	mut best_id := -1
 	mut best_len := 0
 
@@ -35,15 +35,16 @@ pub fn (v &VirtualFileSystem) find_mount(path string) ?(MountId, &Mount) {
 
 pub fn (v &VirtualFileSystem) resolve(path string) !VNode {
 	mount_id, mount := v.find_mount(path) or { return error('No mount found for path') }
-
-	return error('Not implemented')
+	path_traversal := PathTraversal.from(path.replace(mount.prefix, ""))
+	curr_vnode := mount.fs.root()!
+	return curr_vnode
 }
 
 pub interface FileSystem {
 	root() !VNode
-	format() !
 }
 
 pub interface VNode {
+	is_directory() bool
 	read_at(buf voidptr, len u32, offset u32) !
 }

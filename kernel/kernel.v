@@ -7,6 +7,7 @@ import proc { Dispatcher, Process, Scheduler }
 import memory { FrameAllocator, Pagetable, PhysAddr }
 import loader { BuiltinStubLoader }
 import vfs { VirtualFileSystem }
+import fs { IndexedFileSystem }
 
 __global (
 	kernel Kernel
@@ -14,25 +15,30 @@ __global (
 
 pub struct Kernel {
 pub mut:
-	uart0             Uart
-	disk0             Disk
-	frame_allocator   FrameAllocator
-	pagetable         Pagetable
-	scheduler         Scheduler
-	dispatcher        Dispatcher
-	vfs               VirtualFileSystem
+	uart0           Uart
+	disk0           Disk
+	frame_allocator FrameAllocator
+	pagetable       Pagetable
+	scheduler       Scheduler
+	dispatcher      Dispatcher
+	vfs             VirtualFileSystem
 	// global_file_table GlobalFileTable
 }
 
 pub fn Kernel.boot() {
 	kernel.frame_allocator.init()
 
-	// root_fs := IndexedFileSystem.new(kernel.disk0)
-	// root_fs.format() or { panic('Failed to format root filesystem') }
-	// kernel.vfs.mount('/', root_fs) or { panic('Failed to mount root filesystem') }
+	// root_fs := IndexedFileSystem.load(kernel.disk0) or {
+	// 	kernel.uart0.puts('Failed to load root filesystem. Formatting...\n')
+	// 	IndexedFileSystem.format(kernel.disk0) or { panic('Failed to format root filesystem') }
+	// }
+	root_fs := IndexedFileSystem.format(kernel.disk0) or { panic('Failed to format root filesystem') }
+	kernel.vfs.mount('/', root_fs) or { panic('Failed to mount root filesystem') }
 
-	// id, mount := kernel.vfs.resolve('/') or { panic('Failed to resolve root') }
-	// kernel.uart0.puts('Root mounted at ${id} ${mount.prefix}')
+	vnode := kernel.vfs.resolve('/') or { panic('Failed to resolve root') }
+	kernel.uart0.puts('Resolved root: ${vnode.is_directory()}\n')
+
+	// vnode := kernel.vfs.resolve('/') or { panic('Failed to resolve root') }
 
 	stub_loader := BuiltinStubLoader.new()
 	init_process := Process.bootstrap(1, stub_loader) or { panic('Failed to spawn init process') }

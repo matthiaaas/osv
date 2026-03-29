@@ -3,14 +3,14 @@ module vfs
 type MountId = u8
 
 @[noinit]
-pub struct Mount {
+struct Mount {
 pub mut:
 	active bool
 	prefix string
 	fs     FileSystem
 }
 
-pub fn Mount.new(prefix string, fs FileSystem) Mount {
+fn Mount.new(prefix string, fs FileSystem) Mount {
 	return Mount{
 		prefix: prefix
 		fs:     fs
