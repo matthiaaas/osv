@@ -32,13 +32,13 @@ pub fn Kernel.boot() {
 	// 	kernel.uart0.puts('Failed to load root filesystem. Formatting...\n')
 	// 	IndexedFileSystem.format(kernel.disk0) or { panic('Failed to format root filesystem') }
 	// }
-	root_fs := IndexedFileSystem.format(kernel.disk0) or { panic('Failed to format root filesystem') }
+	root_fs := IndexedFileSystem.format(kernel.disk0) or {
+		panic('Failed to format root filesystem')
+	}
 	kernel.vfs.mount('/', root_fs) or { panic('Failed to mount root filesystem') }
 
 	vnode := kernel.vfs.resolve('/') or { panic('Failed to resolve root') }
 	kernel.uart0.puts('Resolved root: ${vnode.is_directory()}\n')
-
-	// vnode := kernel.vfs.resolve('/') or { panic('Failed to resolve root') }
 
 	stub_loader := BuiltinStubLoader.new()
 	init_process := Process.bootstrap(1, stub_loader) or { panic('Failed to spawn init process') }

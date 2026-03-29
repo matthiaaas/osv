@@ -6,6 +6,7 @@ import ds { Bitmap }
 
 const magic = 0x1234_5678
 const block_size = 1024 // bytes
+const superblock_location = 0
 const inode_bitmap_location = 1
 const data_bitmap_location = 2
 const inode_table_location = 3
@@ -60,7 +61,6 @@ fn Inode.from_bytes(bytes []u8) !Inode {
 }
 
 fn (inode &Inode) is_directory() bool {
-	kernel.uart0.puts('inode.mode: ${inode.mode}\n')
 	return inode.mode & file_type_mask == file_type_directory
 }
 
@@ -83,7 +83,7 @@ fn DirectoryEntry.from(inode_number u32, name string) DirectoryEntry {
 	unsafe { vmemcpy(&name_bytes[0], &src[0], int_min(src.len, name_bytes.len)) }
 	return DirectoryEntry{
 		inode_number: inode_number
-		name_bytes: name_bytes
+		name_bytes:   name_bytes
 	}
 }
 
@@ -122,14 +122,14 @@ fn (db &DirectoryBlock) to_bytes() []u8 {
 	return buf
 }
 
-@[noinit]
+@[heap; noinit]
 pub struct IndexedFileSystem implements FileSystem {
 	volume     BlockDevice
 	bio        BlockIo
 	superblock Superblock
 mut:
 	inode_bitmap Bitmap
-	data_bitmap Bitmap
+	data_bitmap  Bitmap
 }
 
 fn IndexedFileSystem.new(volume BlockDevice, superblock Superblock) !IndexedFileSystem {
@@ -138,24 +138,22 @@ fn IndexedFileSystem.new(volume BlockDevice, superblock Superblock) !IndexedFile
 	mut buf := []u8{len: int(block_size)}
 	bio.read(superblock.inode_bitmap_location, mut buf)!
 	inode_bitmap := Bitmap.new(buf)
-
 	bio.read(superblock.data_bitmap_location, mut buf)!
 	data_bitmap := Bitmap.new(buf)
 
 	return IndexedFileSystem{
-		volume:     volume
-		bio:        bio
-		superblock: superblock
+		volume:       volume
+		bio:          bio
+		superblock:   superblock
 		inode_bitmap: inode_bitmap
-		data_bitmap: data_bitmap
+		data_bitmap:  data_bitmap
 	}
 }
 
 pub fn IndexedFileSystem.load(device BlockDevice) !IndexedFileSystem {
 	mut buf := []u8{len: int(device.sector_size())}
-	device.read(0, mut buf)!
+	device.read(superblock_location, mut buf)!
 	superblock := Superblock.from_bytes(buf)!
-	kernel.uart0.puts('Superblock: ${superblock}')
 	return IndexedFileSystem.new(device, superblock)!
 }
 
@@ -172,7 +170,7 @@ pub fn IndexedFileSystem.format(device BlockDevice) !IndexedFileSystem {
 		data_region_location:  data_region_location
 		data_region_size:      block_count - data_region_location
 	}
-	device.write(0, superblock.to_bytes())!
+	device.write(superblock_location, superblock.to_bytes())!
 
 	bio := BlockIo.new(device, block_size)
 
@@ -180,9 +178,8 @@ pub fn IndexedFileSystem.format(device BlockDevice) !IndexedFileSystem {
 	inode_bitmap.set(root_inode_number)
 	bio.write(superblock.inode_bitmap_location, inode_bitmap.bytes)!
 
-	root_data_block_location := data_region_location + root_inode_number
 	mut data_bitmap := Bitmap.new([]u8{len: block_size})
-	data_bitmap.set(root_data_block_location)
+	data_bitmap.set(0)
 	bio.write(superblock.data_bitmap_location, data_bitmap.bytes)!
 
 	mut ifs := IndexedFileSystem.new(device, superblock)!
@@ -190,40 +187,36 @@ pub fn IndexedFileSystem.format(device BlockDevice) !IndexedFileSystem {
 	mut dir_block := DirectoryBlock{}
 	dir_block.add(DirectoryEntry.from(root_inode_number, '.'))
 	dir_block.add(DirectoryEntry.from(root_inode_number, '..'))
-
-	absolute_data_block_location := data_region_location + root_data_block_location
-	bio.write(absolute_data_block_location, dir_block.to_bytes())!
+	root_data_block_location := data_region_location + u32(0)
+	bio.write_at(root_data_block_location, 0, dir_block.to_bytes())!
 
 	mut root_direct := [direct_block_count]u32{}
 	root_direct[0] = root_data_block_location
 
 	root_inode := Inode{
-		mode: file_type_directory,
-		size: sizeof(DirectoryBlock) * 2,
-		link_count: 2,
-		direct: root_direct,
-		indirect: 0,
+		mode:       file_type_directory
+		size:       sizeof(DirectoryEntry) * 2
+		link_count: 2
+		direct:     root_direct
+		indirect:   0
 	}
-	bio.write(inode_table_location + root_inode_number, root_inode.to_bytes())!
-	kernel.uart0.puts('root_inode_bytes: ${root_inode.to_bytes()}\n')
-
-	mut buf := []u8{len: int(sizeof(Inode))}
-	bio.read(inode_table_location + root_inode_number, mut buf)!
-	kernel.uart0.puts('buffff: ${buf}\n')
+	bio.write_at(inode_table_location + root_inode_number, 0, root_inode.to_bytes())!
 
 	return ifs
 }
 
 pub fn (ifs &IndexedFileSystem) root() !VNode {
 	root_inode := ifs.read_inode(root_inode_number)!
-	kernel.uart0.puts('root_inode: ${root_inode.size}\n')
 	return IndexedVNode.new(ifs, root_inode_number, root_inode)
 }
 
 fn (ifs &IndexedFileSystem) read_inode(inode_number u32) !Inode {
 	mut buf := []u8{len: int(sizeof(Inode))}
-	ifs.bio.read(ifs.superblock.inode_table_location + inode_number, mut buf)!
-	kernel.uart0.puts('buf: ${buf}\n')
+
+	block_idx := inode_table_location + (inode_number * sizeof(Inode)) / block_size
+	block_offset := (inode_number * sizeof(Inode)) % block_size
+
+	ifs.bio.read_at(block_idx, block_offset, mut buf)!
 	return Inode.from_bytes(buf)!
 }
 
@@ -239,16 +232,16 @@ fn (mut ifs IndexedFileSystem) alloc_inode() !u32 {
 }
 
 struct IndexedVNode implements VNode {
-	ifs IndexedFileSystem
+	ifs          &IndexedFileSystem
 	inode_number u32
-	inode Inode
+	inode        Inode
 }
 
-fn IndexedVNode.new(ifs IndexedFileSystem, inode_number u32, inode Inode) IndexedVNode {
+fn IndexedVNode.new(ifs &IndexedFileSystem, inode_number u32, inode Inode) IndexedVNode {
 	return IndexedVNode{
-		ifs: ifs,
-		inode_number: inode_number,
-		inode: inode
+		ifs:          ifs
+		inode_number: inode_number
+		inode:        inode
 	}
 }
 

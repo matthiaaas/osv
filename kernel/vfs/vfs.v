@@ -35,7 +35,7 @@ fn (v &VirtualFileSystem) find_mount(path string) ?(MountId, &Mount) {
 
 pub fn (v &VirtualFileSystem) resolve(path string) !VNode {
 	mount_id, mount := v.find_mount(path) or { return error('No mount found for path') }
-	path_traversal := PathTraversal.from(path.replace(mount.prefix, ""))
+	path_traversal := PathTraversal.from(path.replace(mount.prefix, ''))
 	curr_vnode := mount.fs.root()!
 	return curr_vnode
 }
