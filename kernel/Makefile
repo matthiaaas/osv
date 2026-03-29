@@ -33,6 +33,7 @@ ASM = nasm
 READELF = riscv64-unknown-elf-readelf
 OBJDUMP = riscv64-unknown-elf-objdump
 HEXDUMP = hexdump
+XXD = xxd
 
 BUILD_DIR = target
 
@@ -64,10 +65,14 @@ objdump: $(BUILD_DIR)/kernel.elf
 hexdump: $(BUILD_DIR)/kernel.elf
 	$(HEXDUMP) -C $<
 
+diskdump: $(BUILD_DIR)/kernel.elf
+	$(XXD) $(BUILD_DIR)/disk > $(BUILD_DIR)/disk.hex
+
+
 clean:
 	rm -rf $(BUILD_DIR)
 
 format:
 	$(V) fmt -w .
 
-.PHONY: all readelf objdump hexdump clean format
+.PHONY: all readelf objdump hexdump diskdump clean format

@@ -28,17 +28,27 @@ pub mut:
 pub fn Kernel.boot() {
 	kernel.frame_allocator.init()
 
-	// root_fs := IndexedFileSystem.load(kernel.disk0) or {
-	// 	kernel.uart0.puts('Failed to load root filesystem. Formatting...\n')
-	// 	IndexedFileSystem.format(kernel.disk0) or { panic('Failed to format root filesystem') }
-	// }
-	root_fs := IndexedFileSystem.format(kernel.disk0) or {
-		panic('Failed to format root filesystem')
+	root_fs := IndexedFileSystem.load(kernel.disk0) or {
+		kernel.uart0.puts('Failed to load root filesystem. Formatting...\n')
+		IndexedFileSystem.format(kernel.disk0) or { panic('Failed to format root filesystem') }
 	}
 	kernel.vfs.mount('/', root_fs) or { panic('Failed to mount root filesystem') }
 
-	vnode := kernel.vfs.resolve('/') or { panic('Failed to resolve root') }
-	kernel.uart0.puts('Resolved root: ${vnode.is_directory()}\n')
+	mut root_vnode := kernel.vfs.resolve('/') or { panic('Failed to resolve root') }
+	kernel.uart0.puts('Resolved root: ${root_vnode.is_directory()}\n')
+
+	root_vnode.create("test.txt", false) or { panic('Failed to create test.txt') }
+
+	mut test_vnode := root_vnode.lookup("test.txt") or { panic('Failed to lookup test.txt') }
+	kernel.uart0.puts('Resolved test.txt: ${test_vnode.is_directory()}\n')
+
+	aaaaa := "Hello, world!\n".bytes()
+	test_vnode.write_at(unsafe { &aaaaa[0]}, 13, 0) or { panic('Failed to write to test.txt') }
+
+	buf := [13]u8{}
+	test_vnode.read_at(unsafe { &buf[0]}, 13, 0) or { panic('Failed to read from test.txt') }
+	contents := unsafe { tos_clone(&buf[0]) }
+	kernel.uart0.puts('Read from test.txt: ${contents}\n')
 
 	stub_loader := BuiltinStubLoader.new()
 	init_process := Process.bootstrap(1, stub_loader) or { panic('Failed to spawn init process') }
