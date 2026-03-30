@@ -42,15 +42,10 @@ fn main() {
     let uart0 = Uart::new();
 
     let mut ram = Dram::new(1024 * 1024); // 1 MB RAM
-    load_elf_into_ram(
-        "/Users/matthias/Documents/private/projects/osv/kernel/target/kernel.elf",
-        &mut ram,
-        0x8000_0000,
-    )
-    .expect("Failed to load kernel ELF into RAM");
+    load_elf_into_ram("../kernel/target/kernel.elf", &mut ram, 0x8000_0000)
+        .expect("Failed to load kernel ELF into RAM");
 
-    let disk = Disk::new("/Users/matthias/Documents/private/projects/osv/kernel/target/disk")
-        .expect("Failed to load disk file.");
+    let disk = Disk::new("../kernel/target/disk").expect("Failed to load disk file");
 
     let mut bus = Bus::new();
     bus.map_to(0x8000_0000, Box::new(ram));

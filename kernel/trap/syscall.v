@@ -34,6 +34,67 @@ pub fn handle_syscall(sysno u32, mut curr_process Process) !TrapDisposition {
 			curr_process.trapframe.a0 = 0
 			return .reschedule
 		}
+		sys_openat {
+			path := unsafe { byteptr(curr_process.trapframe.a1).vstring() }
+			flags := curr_process.trapframe.a2
+			mode := curr_process.trapframe.a3
+
+			vnode := kernel.vfs.resolve(path) or { return error('Failed to resolve path: ${err}') }
+
+			gft_fd := kernel.global_file_table.add(vnode, 0) or {
+				return error('Failed to add open file: ${err}')
+			}
+			curr_process.file_descriptors[0] = gft_fd
+
+			return .reschedule
+		}
+		sys_read {
+			fd := u32(curr_process.trapframe.a0)
+			buf_ptr := unsafe { byteptr(curr_process.trapframe.a1) }
+			len := u32(curr_process.trapframe.a2)
+
+			mut open_file := kernel.global_file_table.at(curr_process.file_descriptors[fd]) or {
+				return error('Failed to get open file: ${err}')
+			}
+			open_file.read(buf_ptr, len) or {
+				return error('Failed to read from open file: ${err}')
+			}
+			curr_process.trapframe.a0 = len
+			return .reschedule
+		}
+		sys_write {
+			fd := u32(curr_process.trapframe.a0)
+			buf_ptr := unsafe { byteptr(curr_process.trapframe.a1) }
+			len := u32(curr_process.trapframe.a2)
+
+			mut open_file := kernel.global_file_table.at(curr_process.file_descriptors[fd]) or {
+				return error('Failed to get open file: ${err}')
+			}
+			open_file.write(buf_ptr, len) or {
+				return error('Failed to write to open file: ${err}')
+			}
+			curr_process.trapframe.a0 = len
+			return .reschedule
+		}
+		sys_lseek {
+			fd := u32(curr_process.trapframe.a0)
+			offset := u32(curr_process.trapframe.a1)
+			whence := u32(curr_process.trapframe.a2)
+
+			mut open_file := kernel.global_file_table.at(curr_process.file_descriptors[fd]) or {
+				return error('Failed to get open file: ${err}')
+			}
+			open_file.lseek(offset, whence) or { return error('Failed to lseek open file: ${err}') }
+			return .reschedule
+		}
+		sys_close {
+			fd := u32(curr_process.trapframe.a0)
+			kernel.global_file_table.close(curr_process.file_descriptors[fd]) or {
+				return error('Failed to close open file: ${err}')
+			}
+			curr_process.file_descriptors[fd] = 0
+			return .reschedule
+		}
 		else {
 			return error('Unimplemented syscall=${sysno}')
 		}

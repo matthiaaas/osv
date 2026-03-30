@@ -4,9 +4,9 @@ import riscv
 import memory { Pagetable, VirtAddr, map_kernel_regions }
 import loader { ProgramLoader }
 
-const max_file_descriptors = 8
+const max_file_descriptors = 4
 
-type FileDescriptor = u32
+type FileDescriptor = u8
 
 pub enum ProcessState {
 	unused

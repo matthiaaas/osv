@@ -24,7 +24,7 @@ pub fn handle_exception(cause ExceptionCause, mut curr_process Process) TrapDisp
 		}
 		.environment_call {
 			return handle_syscall(curr_process.trapframe.a7, mut curr_process) or {
-				panic('Failed to handle syscall')
+				panic('Failed to handle syscall: ${err}')
 			}
 		}
 	}

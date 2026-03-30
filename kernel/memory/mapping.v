@@ -1,6 +1,7 @@
 module memory
 
 import riscv
+import devices
 
 const kernel_regions = [
 	MemoryRegion{
@@ -13,6 +14,12 @@ const kernel_regions = [
 		virt_addr: riscv.uart0_base
 		phys_addr: riscv.uart0_base
 		size:      riscv.uart_size
+		perms:     pte_r | pte_w
+	},
+	MemoryRegion{
+		virt_addr: devices.disk0_base
+		phys_addr: devices.disk0_base
+		size:      devices.disk0_size
 		perms:     pte_r | pte_w
 	},
 ]

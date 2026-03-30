@@ -1,64 +1,67 @@
 module vfs
 
-pub const max_mounts = 8
-pub const max_entries = 64
-
-type MountId = u8
+const max_mounts = 4
 
 @[noinit]
 pub struct VirtualFileSystem {
 pub mut:
-	mounts [max_mounts]Mount
-	// files  [max_entries]OpenFile
+	public_mounts [max_mounts]Mount
 }
 
 pub fn (mut v VirtualFileSystem) mount(prefix string, fs FileSystem) !MountId {
-	for i in 0 .. v.mounts.len {
-		if !v.mounts[i].active {
-			v.mounts[i] = Mount.new(prefix, fs)
+	for i in 0 .. v.public_mounts.len {
+		if !v.public_mounts[i].active {
+			v.public_mounts[i] = Mount.new(prefix, fs)
 			return MountId(u8(i))
 		}
 	}
 	return error('No free mount slot')
 }
 
-pub fn (v &VirtualFileSystem) resolve(path string) ?(MountId, &Mount) {
+fn (v &VirtualFileSystem) find_mount(path string) ?(MountId, &Mount) {
 	mut best_id := -1
 	mut best_len := 0
 
-	for i in 0 .. v.mounts.len {
-		mut mount := unsafe { &v.mounts[i] }
+	for i in 0 .. v.public_mounts.len {
+		mut mount := &v.public_mounts[i]
 		if mount.active && path.starts_with(mount.prefix) && mount.prefix.len > best_len {
 			best_id = i
 			best_len = mount.prefix.len
 		}
 	}
 
-	return MountId(u8(best_id)), unsafe { &v.mounts[best_id] }
-}
-
-pub fn (v &VirtualFileSystem) walk(path string) ! {}
-
-@[noinit]
-pub struct Mount {
-pub mut:
-	active bool
-	prefix string
-	fs     FileSystem
-}
-
-pub fn Mount.new(prefix string, fs FileSystem) Mount {
-	return Mount{
-		prefix: prefix
-		fs:     fs
-		active: true
+	if best_id == -1 {
+		return none
 	}
+
+	return MountId(u8(best_id)), unsafe { &v.public_mounts[best_id] }
+}
+
+pub fn (v &VirtualFileSystem) resolve(path string) !VNode {
+	mount_id, mount := v.find_mount(path) or { return error('No mount found for path') }
+	path_traversal := PathTraversal.from(path.replace_once(mount.prefix, ''))
+	mut curr_vnode := mount.fs.root()!
+
+	for segment in path_traversal {
+		if !curr_vnode.is_directory() {
+			return error('Not a directory')
+		}
+		curr_vnode = curr_vnode.lookup(segment)!
+	}
+
+	return curr_vnode
 }
 
 pub interface FileSystem {
-	root()
-    format() !
+	root() !VNode
 }
 
-pub interface OpenFile {
+pub interface VNode {
+	is_directory() bool
+	lookup(name string) !VNode
+	read_at(buf voidptr, len u32, offset u32) !
+mut:
+	write_at(buf voidptr, len u32, offset u32) !
+	create(name string, is_directory bool) !VNode
+	close() !
 }
