@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceRoot}/riscv/target/debug/riscv",
             "args": [],
-            "cwd": "${workspaceRoot}"
+            "cwd": "${workspaceRoot}/riscv"
         }
     ]
 }
