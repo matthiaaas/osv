@@ -51,8 +51,7 @@ pub fn (mut scheduler Scheduler) enqueue(process Process) {
 			return
 		}
 	}
-
-	panic('No space for new process')
+	panic('No space for new process: ${process.pid}')
 }
 
 pub fn (mut scheduler Scheduler) current() ?&Process {

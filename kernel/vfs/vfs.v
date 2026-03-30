@@ -60,6 +60,8 @@ pub interface VNode {
 	is_directory() bool
 	lookup(name string) !VNode
 	read_at(buf voidptr, len u32, offset u32) !
-	mut: write_at(buf voidptr, len u32, offset u32) !
+mut:
+	write_at(buf voidptr, len u32, offset u32) !
 	create(name string, is_directory bool) !VNode
+	close() !
 }

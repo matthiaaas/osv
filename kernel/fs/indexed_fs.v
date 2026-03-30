@@ -224,9 +224,10 @@ fn (ifs &IndexedFileSystem) read_inode(inode_number u32) !Inode {
 }
 
 fn (mut ifs IndexedFileSystem) write_inode(inode_number u32, inode &Inode) ! {
-	block_idx := ifs.superblock.inode_table_location + (inode_number * sizeof(Inode)) / ifs.superblock.block_size
-    block_offset := (inode_number * sizeof(Inode)) % ifs.superblock.block_size
-    ifs.bio.write_at(block_idx, block_offset, inode.to_bytes())!
+	block_idx := ifs.superblock.inode_table_location +
+		(inode_number * sizeof(Inode)) / ifs.superblock.block_size
+	block_offset := (inode_number * sizeof(Inode)) % ifs.superblock.block_size
+	ifs.bio.write_at(block_idx, block_offset, inode.to_bytes())!
 }
 
 fn (mut ifs IndexedFileSystem) alloc_inode() !u32 {
@@ -300,79 +301,82 @@ pub fn (vn &IndexedVNode) lookup(name string) !VNode {
 }
 
 pub fn (vn &IndexedVNode) read_at(buf voidptr, len u32, offset u32) ! {
-    if offset >= vn.inode.size { return } // EOF
+	if offset >= vn.inode.size {
+		// EOF
+		return
+	}
 
-    read_len := if offset + len > vn.inode.size { vn.inode.size - offset } else { len }
-    
-    mut bytes_read := u32(0)
-    mut current_offset := offset
-    target_ptr := unsafe { byteptr(buf) }
-    
-    for bytes_read < read_len {
-        logical_block := current_offset / block_size
-        block_offset := current_offset % block_size
-        
-        chunk_size := u32(int_min(int(block_size - block_offset), int(read_len - bytes_read)))
-        
-        phys_block := vn.get_physical_block(logical_block)!
-        if phys_block != 0 {
-            mut chunk_buf := []u8{len: int(chunk_size)}
-            vn.ifs.bio.read_at(phys_block, block_offset, mut chunk_buf)!
-            unsafe { vmemcpy(target_ptr + bytes_read, &chunk_buf[0], int(chunk_size)) }
-        }
-        
-        bytes_read += chunk_size
-        current_offset += chunk_size
-    }
+	read_len := if offset + len > vn.inode.size { vn.inode.size - offset } else { len }
+
+	mut bytes_read := u32(0)
+	mut current_offset := offset
+	target_ptr := unsafe { byteptr(buf) }
+
+	for bytes_read < read_len {
+		logical_block := current_offset / block_size
+		block_offset := current_offset % block_size
+
+		chunk_size := u32(int_min(int(block_size - block_offset), int(read_len - bytes_read)))
+
+		phys_block := vn.get_physical_block(logical_block)!
+		if phys_block != 0 {
+			mut chunk_buf := []u8{len: int(chunk_size)}
+			vn.ifs.bio.read_at(phys_block, block_offset, mut chunk_buf)!
+			unsafe { vmemcpy(target_ptr + bytes_read, &chunk_buf[0], int(chunk_size)) }
+		}
+
+		bytes_read += chunk_size
+		current_offset += chunk_size
+	}
 }
 
 pub fn (mut vn IndexedVNode) write_at(buf voidptr, len u32, offset u32) ! {
-    mut bytes_written := u32(0)
-    mut current_offset := offset
-    src_ptr := unsafe { byteptr(buf) }
+	mut bytes_written := u32(0)
+	mut current_offset := offset
+	src_ptr := unsafe { byteptr(buf) }
 
-    for bytes_written < len {
-        logical_block := current_offset / block_size
-        block_offset := current_offset % block_size
-        chunk_size := u32(int_min(int(block_size - block_offset), int(len - bytes_written)))
+	for bytes_written < len {
+		logical_block := current_offset / block_size
+		block_offset := current_offset % block_size
+		chunk_size := u32(int_min(int(block_size - block_offset), int(len - bytes_written)))
 
-        phys_block := vn.get_or_alloc_physical_block(logical_block)!
+		phys_block := vn.get_or_alloc_physical_block(logical_block)!
 
-        mut chunk_buf := []u8{len: int(chunk_size)}
-        unsafe { vmemcpy(&chunk_buf[0], src_ptr + bytes_written, int(chunk_size)) }
-        vn.ifs.bio.write_at(phys_block, block_offset, chunk_buf)!
+		mut chunk_buf := []u8{len: int(chunk_size)}
+		unsafe { vmemcpy(&chunk_buf[0], src_ptr + bytes_written, int(chunk_size)) }
+		vn.ifs.bio.write_at(phys_block, block_offset, chunk_buf)!
 
-        bytes_written += chunk_size
-        current_offset += chunk_size
-    }
+		bytes_written += chunk_size
+		current_offset += chunk_size
+	}
 
-    if current_offset > vn.inode.size {
-        vn.inode.size = current_offset
-        vn.ifs.write_inode(vn.inode_number, &vn.inode)!
-    }
+	if current_offset > vn.inode.size {
+		vn.inode.size = current_offset
+		vn.ifs.write_inode(vn.inode_number, &vn.inode)!
+	}
 }
 
 pub fn (mut vn IndexedVNode) create(name string, is_directory bool) !VNode {
-    if !vn.is_directory() { 
-        return error('Cannot create "${name}": parent is not a directory') 
-    }
-    
-    if _ := vn.lookup(name) { 
-        return error('Entry already exists: ${name}') 
-    }
+	if !vn.is_directory() {
+		return error('Cannot create "${name}": parent is not a directory')
+	}
 
-    new_inode_number := vn.ifs.alloc_inode()!
-    mut child_inode := Inode{
-        mode: if is_directory { file_type_directory } else { file_type_regular }
-        size: 0
-        link_count: 1
-        direct: [direct_block_count]u32{}
-        indirect: 0
-    }
-    vn.ifs.write_inode(new_inode_number, &child_inode)!
+	if _ := vn.lookup(name) {
+		return error('Entry already exists: ${name}')
+	}
 
-    entry := DirectoryEntry.from(new_inode_number, name)
-    vn.write_at(&entry, u32(sizeof(DirectoryEntry)), vn.inode.size)!
+	new_inode_number := vn.ifs.alloc_inode()!
+	mut child_inode := Inode{
+		mode:       if is_directory { file_type_directory } else { file_type_regular }
+		size:       0
+		link_count: 1
+		direct:     [direct_block_count]u32{}
+		indirect:   0
+	}
+	vn.ifs.write_inode(new_inode_number, &child_inode)!
+
+	entry := DirectoryEntry.from(new_inode_number, name)
+	vn.write_at(&entry, u32(sizeof(DirectoryEntry)), vn.inode.size)!
 
 	if is_directory {
 		vn.inode.link_count += 1
@@ -389,6 +393,8 @@ pub fn (mut vn IndexedVNode) create(name string, is_directory bool) !VNode {
 
 	return child_vnode
 }
+
+pub fn (vn &IndexedVNode) close() ! {}
 
 fn (vn &IndexedVNode) get_physical_block(logical_index u32) !u32 {
 	if logical_index < direct_block_count {
@@ -416,33 +422,33 @@ fn (vn &IndexedVNode) get_physical_block(logical_index u32) !u32 {
 }
 
 fn (mut vn IndexedVNode) get_or_alloc_physical_block(logical_index u32) !u32 {
-    phys_block := vn.get_physical_block(logical_index)!
-    if phys_block != 0 {
-        return phys_block
-    }
+	phys_block := vn.get_physical_block(logical_index)!
+	if phys_block != 0 {
+		return phys_block
+	}
 
-    new_block := vn.ifs.alloc_data_block()!
+	new_block := vn.ifs.alloc_data_block()!
 
-    if logical_index < direct_block_count {
-        vn.inode.direct[logical_index] = new_block
-    } else {
-        indirect_index := logical_index - direct_block_count
-        
-        if vn.inode.indirect == 0 {
-            vn.inode.indirect = vn.ifs.alloc_data_block()!
-            vn.ifs.bio.write(vn.inode.indirect, []u8{len: int(block_size)})!
-        }
-        
-        mut buf := []u8{len: int(block_size)}
-        vn.ifs.bio.read(vn.inode.indirect, mut buf)!
-        
-        mut indirect_blocks := []u32{len: int(block_size / sizeof(u32))}
-        unsafe { vmemcpy(&indirect_blocks[0], &buf[0], int(block_size)) }
-        
-        indirect_blocks[indirect_index] = new_block
-        vn.ifs.bio.write(vn.inode.indirect, buf)!
-    }
+	if logical_index < direct_block_count {
+		vn.inode.direct[logical_index] = new_block
+	} else {
+		indirect_index := logical_index - direct_block_count
 
-    vn.ifs.write_inode(vn.inode_number, &vn.inode)!
-    return new_block
+		if vn.inode.indirect == 0 {
+			vn.inode.indirect = vn.ifs.alloc_data_block()!
+			vn.ifs.bio.write(vn.inode.indirect, []u8{len: int(block_size)})!
+		}
+
+		mut buf := []u8{len: int(block_size)}
+		vn.ifs.bio.read(vn.inode.indirect, mut buf)!
+
+		mut indirect_blocks := []u32{len: int(block_size / sizeof(u32))}
+		unsafe { vmemcpy(&indirect_blocks[0], &buf[0], int(block_size)) }
+
+		indirect_blocks[indirect_index] = new_block
+		vn.ifs.bio.write(vn.inode.indirect, buf)!
+	}
+
+	vn.ifs.write_inode(vn.inode_number, &vn.inode)!
+	return new_block
 }
