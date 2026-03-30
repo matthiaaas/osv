@@ -177,12 +177,33 @@ fn IndexedFileSystem.load(dev BlockDevice) !IndexedFileSystem {
     )
 }
 
-fn IndexedFileSystem.format(dev BlockDevice) !IndexedFileSystem {
-    superblock := Superblock.new(
-        block_size: block_size,
-        block_count: (fs.volume.sector_count() * fs.volume.sector_size()) / block_size,
-        // ...
-    )
+pub fn IndexedFileSystem.format(device BlockDevice) !IndexedFileSystem {
+	block_count := (device.sector_count() * device.sector_size()) / block_size
+	superblock := Superblock{
+		magic:                 magic
+		block_size:            block_size
+		block_count:           block_count
+		inode_bitmap_location: inode_bitmap_location
+		data_bitmap_location:  data_bitmap_location
+		inode_table_location:  inode_table_location
+		inode_table_size:      inode_table_size
+		data_region_location:  data_region_location
+		data_region_size:      block_count - data_region_location
+	}
+	device.write(0, superblock.to_bytes())!
+
+	bio := BlockIo.new(device, block_size)
+
+	mut inode_bitmap := Bitmap.new([]u8{len: block_size})
+	inode_bitmap.set(0)
+	bio.write(superblock.inode_bitmap_location, inode_bitmap.bytes)!
+
+	data_bitmap := Bitmap.new([]u8{len: block_size})
+	bio.write(superblock.data_bitmap_location, data_bitmap.bytes)!
+
+	root_inode := // ...
+
+	return IndexedFileSystem.new(device, superblock)
 }
 
 fn (fs IndexedFileSystem) root() !VNode {
@@ -210,7 +231,7 @@ fn IndexedVNode.new(fs IndexedFileSystem, inode_number u32, inode Inode) Indexed
 }
 
 fn (vn IndexedVNode) is_directory() bool {
-	return true // check inode mode
+	return vn.inode.is_directory() // checks mode
 }
 
 fn (vn IndexedVNode) lookup(name string) !VNode {
