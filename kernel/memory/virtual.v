@@ -86,6 +86,44 @@ pub fn (pagetable Pagetable) raw_value() u32 {
 	return u32(voidptr(pagetable))
 }
 
+pub fn (pagetable Pagetable) clone() !Pagetable {
+	child := Pagetable.new()!
+
+	for vpn1 in 0 .. int(pagetable_size) {
+		parent_l1_pte := pagetable.at(u32(vpn1))
+		if !parent_l1_pte.is_valid() {
+			continue
+		}
+
+		parent_subtable := parent_l1_pte.as_pagetable()
+		child_subtable := Pagetable.new()!
+		child.at(u32(vpn1)).point_to(child_subtable.phys_addr(), 0)
+
+		for vpn0 in 0 .. int(pagetable_size) {
+			parent_l2_pte := parent_subtable.at(u32(vpn0))
+			if !parent_l2_pte.is_valid() {
+				continue
+			}
+
+			// Extract permission flags, excluding pte_v (point_to re-adds it)
+			perms := parent_l2_pte.raw_value() & 0x3fe
+
+			if parent_l2_pte.raw_value() & pte_u != 0 {
+				src := parent_l2_pte.phys_addr()
+				dst := kernel.frame_allocator.allocate() or {
+					return error('pagetable clone: out of frames')
+				}
+				unsafe { C.memcpy(voidptr(dst), voidptr(src), riscv.page_size) }
+				child_subtable.at(u32(vpn0)).point_to(dst, perms)
+			} else {
+				child_subtable.at(u32(vpn0)).point_to(parent_l2_pte.phys_addr(), perms)
+			}
+		}
+	}
+
+	return child
+}
+
 pub type PagetableEntry = &u32
 
 @[inline]
@@ -118,12 +156,4 @@ pub fn (pte PagetableEntry) phys_addr() PhysAddr {
 @[inline]
 pub fn (pte PagetableEntry) as_pagetable() Pagetable {
 	return Pagetable(voidptr(pte.phys_addr()))
-}
-
-pub struct MemoryRegion {
-pub:
-	virt_addr VirtAddr
-	phys_addr PhysAddr
-	size      u32
-	perms     u32
 }

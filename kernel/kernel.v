@@ -8,6 +8,7 @@ import memory { FrameAllocator, Pagetable, PhysAddr }
 import loader { BuiltinStubLoader }
 import vfs { VirtualFileSystem }
 import fs { IndexedFileSystem }
+import file { GlobalFileTable }
 
 __global (
 	kernel Kernel
@@ -35,6 +36,19 @@ pub fn Kernel.boot() {
 		}
 	}
 	kernel.vfs.mount('/', root_fs) or { panic('Failed to mount root filesystem: ${err}') }
+
+	mut root_vnode := kernel.vfs.resolve('/') or { panic('Failed to resolve root: ${err}') }
+	root_vnode.lookup('test.txt') or {
+		kernel.uart0.puts('test.txt not found. Creating...\n')
+		root_vnode.create('test.txt', false) or { panic('Failed to create test.txt: ${err}') }
+		hello_world := 'Hello, world!'.bytes()
+		mut test_txt_vnode := root_vnode.lookup('test.txt') or {
+			panic('Failed to lookup test.txt: ${err}')
+		}
+		test_txt_vnode.write_at(unsafe { &hello_world[0] }, u32(hello_world.len), 0) or {
+			panic('Failed to write to test.txt: ${err}')
+		}
+	}
 
 	stub_loader := BuiltinStubLoader.new()
 	init_process := Process.bootstrap(1, stub_loader) or {

@@ -13,13 +13,13 @@ const kernel_regions = [
 	MemoryRegion{
 		virt_addr: riscv.uart0_base
 		phys_addr: riscv.uart0_base
-		size:      riscv.uart_size
+		size:      riscv.uart0_mmio_size
 		perms:     pte_r | pte_w
 	},
 	MemoryRegion{
 		virt_addr: devices.disk0_base
 		phys_addr: devices.disk0_base
-		size:      devices.disk0_size
+		size:      devices.disk0_mmio_size
 		perms:     pte_r | pte_w
 	},
 ]

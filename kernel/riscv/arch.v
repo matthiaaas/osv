@@ -5,7 +5,7 @@ pub const dram_size = u32(1 * 1024 * 1024) // 1MB
 pub const phystop = dram_base + dram_size
 
 pub const uart0_base = u32(0x1000_0000)
-pub const uart_size = u32(0x1000)
+pub const uart0_mmio_size = u32(0x1000)
 
 pub const page_size = u32(4096)
 

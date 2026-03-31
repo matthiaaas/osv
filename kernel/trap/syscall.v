@@ -1,6 +1,7 @@
 module trap
 
-import proc { Process }
+import file { SeekFrom }
+import proc { LocalFileDescriptor, Process }
 
 pub const sys_getpid = u32(172)
 pub const sys_clone = u32(220) // fork etc.
@@ -34,18 +35,29 @@ pub fn handle_syscall(sysno u32, mut curr_process Process) !TrapDisposition {
 			curr_process.trapframe.a0 = 0
 			return .reschedule
 		}
+		sys_clone {
+			mut child_process := kernel.scheduler.fork(mut curr_process) or {
+				return error('Failed to fork: ${err}')
+			}
+			child_process.trapframe.a0 = 0
+			curr_process.trapframe.a0 = child_process.pid
+			kernel.scheduler.enqueue(child_process)
+			return .reschedule
+		}
 		sys_openat {
 			path := unsafe { byteptr(curr_process.trapframe.a1).vstring() }
 			flags := curr_process.trapframe.a2
 			mode := curr_process.trapframe.a3
 
 			vnode := kernel.vfs.resolve(path) or { return error('Failed to resolve path: ${err}') }
-
 			gft_fd := kernel.global_file_table.add(vnode, 0) or {
 				return error('Failed to add open file: ${err}')
 			}
-			curr_process.file_descriptors[0] = gft_fd
-
+			fd := curr_process.alloc_file_descriptor(gft_fd) or {
+				return error('Failed to allocate file descriptor: ${err}')
+			}
+			curr_process.file_descriptors[fd] = gft_fd
+			curr_process.trapframe.a0 = fd
 			return .reschedule
 		}
 		sys_read {
@@ -84,15 +96,19 @@ pub fn handle_syscall(sysno u32, mut curr_process Process) !TrapDisposition {
 			mut open_file := kernel.global_file_table.at(curr_process.file_descriptors[fd]) or {
 				return error('Failed to get open file: ${err}')
 			}
-			open_file.lseek(offset, whence) or { return error('Failed to lseek open file: ${err}') }
+			seek_from := SeekFrom.from2(whence) or { return error('Invalid whence') }
+			open_file.lseek(offset, seek_from) or {
+				return error('Failed to lseek open file: ${err}')
+			}
+			curr_process.trapframe.a0 = open_file.position
 			return .reschedule
 		}
 		sys_close {
-			fd := u32(curr_process.trapframe.a0)
+			fd := LocalFileDescriptor(u8(curr_process.trapframe.a0))
 			kernel.global_file_table.close(curr_process.file_descriptors[fd]) or {
 				return error('Failed to close open file: ${err}')
 			}
-			curr_process.file_descriptors[fd] = 0
+			curr_process.file_descriptors[fd] = proc.invalid_open_file_descriptor
 			return .reschedule
 		}
 		else {

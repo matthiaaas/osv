@@ -238,12 +238,10 @@ fn (mut ifs IndexedFileSystem) alloc_inode() !u32 {
 }
 
 fn (mut ifs IndexedFileSystem) alloc_data_block() !u32 {
-	free_data_block_idx := ifs.data_bitmap.find_first_unset() or {
-		return error('No free data blocks')
-	}
-	ifs.data_bitmap.set(free_data_block_idx)
+	rel := ifs.data_bitmap.find_first_unset() or { return error('No free data blocks') }
+	ifs.data_bitmap.set(rel)
 	ifs.sync_data_bitmap()!
-	return free_data_block_idx
+	return ifs.superblock.data_region_location + rel
 }
 
 fn (ifs &IndexedFileSystem) sync_inode_bitmap() ! {

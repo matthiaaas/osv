@@ -1,12 +1,28 @@
-module main
+module file
 
 import vfs { VNode }
 
-type SeekFrom = u32
+pub type OpenFileDescriptor = u8
+
+pub enum SeekFrom {
+	start   = 0
+	current = 1
+	end     = 2
+}
+
+// Somehow, builtin .from() crashes with bus error
+pub fn SeekFrom.from2(whence u32) ?SeekFrom {
+	match whence {
+		0 { return .start }
+		1 { return .current }
+		2 { return .end }
+		else { return none }
+	}
+}
 
 @[noinit]
 pub struct OpenFileDescription {
-mut:
+pub mut:
 	vnode     VNode
 	position  u32
 	flags     u32
@@ -33,10 +49,18 @@ pub fn (mut ofd OpenFileDescription) write(buf voidptr, len u32) ! {
 }
 
 pub fn (mut ofd OpenFileDescription) lseek(offset u32, whence SeekFrom) ! {
-	ofd.position = offset
+	match whence {
+		.start {
+			ofd.position = offset
+		}
+		.current {
+			ofd.position += offset
+		}
+		else {
+			return error('Invalid whence')
+		}
+	}
 }
-
-pub type OpenFileDescriptor = u8
 
 const max_open_files = 16
 
