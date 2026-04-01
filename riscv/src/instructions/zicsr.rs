@@ -1,6 +1,6 @@
 use crate::{
     cpu::Cpu,
-    isa::Instr,
+    isa::{Instr, PrivilegeMode},
     trap::{Exception, Trap},
 };
 
@@ -10,6 +10,16 @@ pub fn exec_csr(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
     let rd = i.rd();
     let rs1 = i.rs1();
     let funct3 = instr.funct3();
+
+    let required_priv = PrivilegeMode::from(((csr_addr >> 8) & 0b11) as u8);
+    let is_read_only = (csr_addr >> 10) == 0b11;
+    let is_write_attempt = funct3 == 0b001 || rs1 != 0;
+
+    if required_priv > cpu.priv_mode {
+        return Err(Trap::Exception(Exception::IllegalInstruction(instr)));
+    } else if is_read_only && is_write_attempt {
+        return Err(Trap::Exception(Exception::IllegalInstruction(instr)));
+    }
 
     match funct3 {
         0b001 => {
