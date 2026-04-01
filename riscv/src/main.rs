@@ -4,6 +4,7 @@ mod debug;
 mod devices;
 mod instructions;
 mod isa;
+mod mmu;
 mod profiling;
 mod regs;
 mod trap;

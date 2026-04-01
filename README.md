@@ -19,5 +19,5 @@ make
 
 ```
 cd riscv
-cargo run
+RUST_LOG=debug cargo run
 ```

@@ -2,7 +2,8 @@ use crate::csrs::CsrFile;
 use crate::devices::Bus;
 use crate::instructions::{privileged, rv32i, zicsr};
 use crate::isa::opcodes::{AUIPC, BRANCH, JAL, JALR, LOAD, LUI, OP_IMM, OP_REG, STORE, SYSTEM};
-use crate::isa::{INSTRUCTION_SIZE, Instr, PrivilegeMode};
+use crate::isa::{INSTRUCTION_SIZE, Instr, PrivilegeMode, Pte};
+use crate::mmu::AccessType;
 use crate::regs::RegFile;
 use crate::trap::{Exception, Trap};
 
@@ -32,7 +33,7 @@ impl Cpu {
     }
 
     pub fn fetch(&mut self) -> Result<Instr, Trap> {
-        let phys_pc = self.translate(self.pc)?;
+        let phys_pc = self.translate(self.pc, AccessType::Fetch)?;
         self.bus
             .load(phys_pc, INSTRUCTION_SIZE)
             .map(Instr::from)
@@ -84,7 +85,7 @@ impl Cpu {
     }
 
     fn handle_trap(&mut self, trap: Trap) {
-        let phys_pc = self.translate(self.pc).unwrap_or(0);
+        let phys_pc = self.translate(self.pc, AccessType::Fetch).unwrap_or(0);
         log::debug!(
             "Trap: {:?} @ pc={:#010x}({:#010x}), {:?}",
             trap,
@@ -104,31 +105,39 @@ impl Cpu {
         self.next_pc = self.csr_file.get_mtvec();
     }
 
-    pub fn translate(&mut self, virt_addr: u32) -> Result<u32, Trap> {
+    pub fn translate(&mut self, virt_addr: u32, access_type: AccessType) -> Result<u32, Trap> {
         let satp = self.csr_file.get_satp();
         if satp & 0x8000_0000 == 0 {
             return Ok(virt_addr);
         }
-
         let root_ppn = satp & 0x003f_ffff;
         let root_pt_addr = root_ppn << 12;
 
         let vpn1 = (virt_addr >> 22) & 0x3ff;
-        let pte1_addr = root_pt_addr + (vpn1 * 4);
-        let pte1 = self.bus.load(pte1_addr, 4)?;
+        let pte1_addr = root_pt_addr + vpn1 * 4;
+        let pte1: Pte = self.bus.load(pte1_addr, 4)?.into();
 
-        let pt0_ppn = (pte1 >> 10) & 0x003f_ffff;
-        let pt0_addr = pt0_ppn << 12;
+        if !pte1.is_valid() {
+            return Err(access_type.page_fault(virt_addr).into());
+        }
+        if pte1.is_leaf() {
+            // Superpages not supported: a leaf here is always wrong.
+            return Err(access_type.page_fault(virt_addr).into());
+        }
 
         let vpn0 = (virt_addr >> 12) & 0x3ff;
-        let pte0_addr = pt0_addr + (vpn0 * 4);
-        let pte0 = self.bus.load(pte0_addr, 4)?;
-
-        let final_ppn = (pte0 >> 10) & 0x003f_ffff;
-
-        let offset = virt_addr & 0xfff;
-
-        let phys_addr = (final_ppn << 12) | offset;
+        let pte0_addr = (pte1.ppn() << 12) + vpn0 * 4;
+        let pte0: Pte = self.bus.load(pte0_addr, 4)?.into();
+        if !pte0.is_valid() {
+            return Err(access_type.page_fault(virt_addr).into());
+        }
+        if !pte0.is_leaf() {
+            return Err(access_type.page_fault(virt_addr).into());
+        }
+        if !access_type.grants(pte0, self.priv_mode) {
+            return Err(access_type.page_fault(virt_addr).into());
+        }
+        let phys_addr = (pte0.ppn() << 12) | (virt_addr & 0xfff);
         Ok(phys_addr)
     }
 }
