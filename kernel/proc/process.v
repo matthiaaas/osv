@@ -58,6 +58,7 @@ pub fn Process.bootstrap(pid u32, l ProgramLoader) !Process {
 
 	loaded_program := l.load(mut pagetable)!
 
+	// TODO: allocate contiguous frames in a single safe call OR even better: stop identity mapping all kernel regions
 	kernel_stack_frame_1 := kernel.frame_allocator.allocate() or {
 		return error('Failed to allocate kernel stack frame')
 	}

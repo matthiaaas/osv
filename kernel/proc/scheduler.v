@@ -5,7 +5,7 @@ const max_processes = 32
 pub struct Scheduler {
 pub mut:
 	curr_pid    u32
-	pid_counter u32
+	pid_counter u32 = 1
 	processes   [max_processes]Process
 }
 

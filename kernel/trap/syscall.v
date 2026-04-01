@@ -40,6 +40,7 @@ pub fn handle_syscall(sysno u32, mut curr_process Process) !TrapDisposition {
 				return error('Failed to fork: ${err}')
 			}
 			child_process.trapframe.a0 = 0
+			child_process.trapframe.epc += 4
 			curr_process.trapframe.a0 = child_process.pid
 			kernel.scheduler.enqueue(child_process)
 			return .reschedule

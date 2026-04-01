@@ -51,16 +51,10 @@ pub fn Kernel.boot() {
 	}
 
 	stub_loader := BuiltinStubLoader.new()
-	init_process := Process.bootstrap(1, stub_loader) or {
+	init_process := Process.bootstrap(kernel.scheduler.next_pid(), stub_loader) or {
 		panic('Failed to spawn init process: ${err}')
 	}
 	kernel.scheduler.enqueue(init_process)
-
-	// second_loader := BuiltinStubLoader.new()
-	// second_process := Process.bootstrap(2, second_loader) or {
-	// 	panic('Failed to spawn second process: ${err}')
-	// }
-	// kernel.scheduler.enqueue(second_process)
 }
 
 pub fn (mut k Kernel) run() {
