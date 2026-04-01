@@ -116,27 +116,21 @@ impl Cpu {
         let vpn1 = (virt_addr >> 22) & 0x3ff;
         let pte1_addr = root_pt_addr + vpn1 * 4;
         let pte1: Pte = self.bus.load(pte1_addr, 4)?.into();
-
-        if !pte1.is_valid() {
-            return Err(access_type.page_fault(virt_addr).into());
-        }
-        if pte1.is_leaf() {
-            // Superpages not supported: a leaf here is always wrong.
+        if !pte1.is_valid() || !pte1.is_leaf() {
             return Err(access_type.page_fault(virt_addr).into());
         }
 
         let vpn0 = (virt_addr >> 12) & 0x3ff;
         let pte0_addr = (pte1.ppn() << 12) + vpn0 * 4;
         let pte0: Pte = self.bus.load(pte0_addr, 4)?.into();
-        if !pte0.is_valid() {
+        if !pte0.is_valid() || !pte0.is_leaf() {
             return Err(access_type.page_fault(virt_addr).into());
         }
-        if !pte0.is_leaf() {
-            return Err(access_type.page_fault(virt_addr).into());
-        }
+
         if !access_type.grants(pte0, self.priv_mode) {
             return Err(access_type.page_fault(virt_addr).into());
         }
+
         let phys_addr = (pte0.ppn() << 12) | (virt_addr & 0xfff);
         Ok(phys_addr)
     }
