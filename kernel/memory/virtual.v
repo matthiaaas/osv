@@ -86,7 +86,7 @@ pub fn (pagetable Pagetable) raw_value() u32 {
 	return u32(voidptr(pagetable))
 }
 
-pub fn (pagetable Pagetable) clone() !Pagetable {
+pub fn (pagetable Pagetable) deep_clone() !Pagetable {
 	child := Pagetable.new()!
 
 	for vpn1 in 0 .. int(pagetable_size) {

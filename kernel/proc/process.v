@@ -3,13 +3,6 @@ module proc
 import riscv
 import memory { Pagetable, VirtAddr, map_kernel_regions }
 import loader { ProgramLoader }
-import file { OpenFileDescriptor }
-
-const max_file_descriptors = 4
-
-pub const invalid_open_file_descriptor = OpenFileDescriptor(0xff)
-
-pub type LocalFileDescriptor = u8
 
 pub enum ProcessState {
 	unused
@@ -26,7 +19,7 @@ pub mut:
 	state            ProcessState
 	pagetable        Pagetable
 	trapframe        TrapFrame
-	file_descriptors [max_file_descriptors]OpenFileDescriptor
+	file_descriptors FileDescriptorTable
 	kernel_stack_top u32
 	parent_pid       ?u32
 	exit_status      ?int
@@ -46,7 +39,7 @@ pub fn Process.new(pid u32,
 			epc: program_counter
 			sp:  stack_top
 		}
-		file_descriptors: [max_file_descriptors]OpenFileDescriptor{init: invalid_open_file_descriptor}
+		file_descriptors: FileDescriptorTable.new()
 		kernel_stack_top: kernel_stack_top
 		parent_pid:       parent_pid
 		exit_status:      none
@@ -70,14 +63,4 @@ pub fn Process.bootstrap(pid u32, l ProgramLoader) !Process {
 
 	return Process.new(pid, pagetable, loaded_program.entry, loaded_program.stack_top,
 		kernel_stack_top, none)
-}
-
-pub fn (mut p Process) alloc_file_descriptor(gft_fd OpenFileDescriptor) ?LocalFileDescriptor {
-	for i in 0 .. p.file_descriptors.len {
-		if p.file_descriptors[i] == invalid_open_file_descriptor {
-			p.file_descriptors[i] = gft_fd
-			return LocalFileDescriptor(i)
-		}
-	}
-	return none
 }

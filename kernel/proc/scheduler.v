@@ -59,14 +59,13 @@ pub fn (mut scheduler Scheduler) current() ?&Process {
 	return scheduler.by_pid(scheduler.curr_pid)
 }
 
-pub fn (mut scheduler Scheduler) zombify(mut process Process, exit_status int) {
+pub fn (mut scheduler Scheduler) zombify(mut process Process) {
 	process.state = .zombie
-	process.exit_status = exit_status
 }
 
 pub fn (mut scheduler Scheduler) fork(mut process Process) !Process {
 	child_pid := scheduler.next_pid()
-	child_pagetable := process.pagetable.clone() or {
+	child_pagetable := process.pagetable.deep_clone() or {
 		return error('Failed to clone pagetable: ${err}')
 	}
 	child_process := Process{

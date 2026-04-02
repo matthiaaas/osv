@@ -70,8 +70,10 @@ mut:
 	open_files [max_open_files]OpenFileDescription
 }
 
-pub fn (gft &GlobalFileTable) at(index u32) ?&OpenFileDescription {
-	assert index < max_open_files
+pub fn (gft &GlobalFileTable) at(index OpenFileDescriptor) ?&OpenFileDescription {
+	if index >= gft.open_files.len {
+		return none
+	}
 
 	open_file := &gft.open_files[index]
 	if open_file.ref_count == 0 {
@@ -90,7 +92,12 @@ pub fn (mut gft GlobalFileTable) add(vnode VNode, flags u32) !OpenFileDescriptor
 	return error('No free open file slot')
 }
 
-pub fn (mut gft GlobalFileTable) close(index OpenFileDescriptor) ! {
+pub fn (mut gft GlobalFileTable) retain(index OpenFileDescriptor) ! {
+	mut open_file := gft.at(index) or { return error('Open file not found') }
+	open_file.ref_count++
+}
+
+pub fn (mut gft GlobalFileTable) release(index OpenFileDescriptor) ! {
 	mut open_file := gft.at(index) or { return error('Open file not found') }
 	open_file.ref_count--
 	if open_file.ref_count == 0 {
