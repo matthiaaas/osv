@@ -23,8 +23,10 @@ struct Superblock {
 	data_bitmap_location  u32
 	inode_table_location  u32
 	inode_table_size      u32
+	max_inode_count       u32
 	data_region_location  u32
 	data_region_size      u32
+	max_data_count        u32
 }
 
 fn (superblock &Superblock) to_bytes() []u8 {
@@ -165,6 +167,8 @@ pub fn IndexedFileSystem.load(device BlockDevice) !IndexedFileSystem {
 
 pub fn IndexedFileSystem.format(device BlockDevice) !IndexedFileSystem {
 	block_count := (device.sector_count() * device.sector_size()) / block_size
+	max_inode_count := (inode_table_size * block_size) / sizeof(Inode)
+	max_data_count := block_count - data_region_location
 	superblock := Superblock{
 		magic:                 magic
 		block_size:            block_size
@@ -173,8 +177,10 @@ pub fn IndexedFileSystem.format(device BlockDevice) !IndexedFileSystem {
 		data_bitmap_location:  data_bitmap_location
 		inode_table_location:  inode_table_location
 		inode_table_size:      inode_table_size
+		max_inode_count:       max_inode_count
 		data_region_location:  data_region_location
 		data_region_size:      block_count - data_region_location
+		max_data_count:        max_data_count
 	}
 	device.write(superblock_location, superblock.to_bytes())!
 
@@ -232,16 +238,22 @@ fn (mut ifs IndexedFileSystem) write_inode(inode_number u32, inode &Inode) ! {
 
 fn (mut ifs IndexedFileSystem) alloc_inode() !u32 {
 	free_inode_idx := ifs.inode_bitmap.find_first_unset() or { return error('No free inodes') }
+	if free_inode_idx >= ifs.superblock.max_inode_count {
+		return error('Inode table full')
+	}
 	ifs.inode_bitmap.set(free_inode_idx)
 	ifs.sync_inode_bitmap()!
-	return free_inode_idx
+	return ifs.superblock.inode_table_location + free_inode_idx
 }
 
 fn (mut ifs IndexedFileSystem) alloc_data_block() !u32 {
-	rel := ifs.data_bitmap.find_first_unset() or { return error('No free data blocks') }
-	ifs.data_bitmap.set(rel)
+	free_data_block_idx := ifs.data_bitmap.find_first_unset() or { return error('No free data blocks') }
+	if free_data_block_idx >= ifs.superblock.max_data_count {
+		return error('Data region full')
+	}
+	ifs.data_bitmap.set(free_data_block_idx)
 	ifs.sync_data_bitmap()!
-	return ifs.superblock.data_region_location + rel
+	return ifs.superblock.data_region_location + free_data_block_idx
 }
 
 fn (ifs &IndexedFileSystem) sync_inode_bitmap() ! {
@@ -444,6 +456,7 @@ fn (mut vn IndexedVNode) get_or_alloc_physical_block(logical_index u32) !u32 {
 		unsafe { vmemcpy(&indirect_blocks[0], &buf[0], int(block_size)) }
 
 		indirect_blocks[indirect_index] = new_block
+		unsafe { vmemcpy(&buf[0], &indirect_blocks[0], int(block_size)) }
 		vn.ifs.bio.write(vn.inode.indirect, buf)!
 	}
 

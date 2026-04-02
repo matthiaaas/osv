@@ -85,21 +85,20 @@ pub fn (_l BuiltinStubLoader) load(mut pagetable Pagetable) !LoadedProgram {
 		code[37] = 0x02010113 // addi sp, sp, 32    (Restore stack pointer)
 
 		// --- 1. CLONE (FORK) ---
-        code[38] = 0x01100513 // li a0, 17          (Flags: SIGCHLD = 17 for standard fork)
-        code[39] = 0x00000593 // li a1, 0           (child_stack = 0 to copy parent stack)
-        code[40] = 0x0dc00893 // li a7, 220         (sys_clone)
-        code[41] = 0x00000073 // ecall
+		code[38] = 0x01100513 // li a0, 17          (Flags: SIGCHLD = 17 for standard fork)
+		code[39] = 0x00000593 // li a1, 0           (child_stack = 0 to copy parent stack)
+		code[40] = 0x0dc00893 // li a7, 220         (sys_clone)
+		code[41] = 0x00000073 // ecall
 
-        // --- 2. GET PID ---
-        code[42] = 0x0ac00893 // li a7, 172         (sys_getpid)
-        code[43] = 0x00000073 // ecall              (PID is now stored in a0)
+		// --- 2. GET PID ---
+		code[42] = 0x0ac00893 // li a7, 172         (sys_getpid)
+		code[43] = 0x00000073 // ecall              (PID is now stored in a0)
 
-        // --- 3. EXIT ---
-        // Note: a0 already holds the PID returned from sys_getpid, 
-        // so we don't need to move it. It acts directly as the exit code.
-        code[44] = 0x05d00893 // li a7, 93          (sys_exit)
-        code[45] = 0x00000073 // ecall
-
+		// --- 3. EXIT ---
+		// Note: a0 already holds the PID returned from sys_getpid,
+		// so we don't need to move it. It acts directly as the exit code.
+		code[44] = 0x05d00893 // li a7, 93          (sys_exit)
+		code[45] = 0x00000073 // ecall
 
 		// code := &u32(voidptr(code_frame))
 		// code[0] = 0x00000493 // li s1, 0          (Initialize sum in s1 to 0)

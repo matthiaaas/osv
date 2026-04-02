@@ -37,6 +37,11 @@ pub fn (phys_addr PhysAddr) page_up() PhysAddr {
 }
 
 @[inline]
+pub fn (phys_addr PhysAddr) page_aligned() bool {
+	return phys_addr % riscv.page_size == 0
+}
+
+@[inline]
 fn (phys_addr PhysAddr) to_ppn() u32 {
 	return (u32(phys_addr) >> 12) << 10
 }

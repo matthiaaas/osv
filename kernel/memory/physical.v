@@ -56,6 +56,7 @@ pub fn (mut allocator FrameAllocator) allocate_contiguous(page_count usize) ?Phy
 }
 
 pub fn (mut allocator FrameAllocator) deallocate(phys_addr PhysAddr) {
+	assert phys_addr.page_aligned()
 	mut frame := unsafe { &FreeFrame(voidptr(phys_addr)) }
 	frame.next = allocator.free_frames
 	allocator.free_frames = frame
