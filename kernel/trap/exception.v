@@ -17,6 +17,7 @@ pub enum ExceptionCause as u32 {
 pub fn handle_exception(cause ExceptionCause, mut curr_process Process) TrapDisposition {
 	match cause {
 		.illegal_instruction {
+			curr_process.exit_status = 132
 			return .terminate_curr
 		}
 		.breakpoint {

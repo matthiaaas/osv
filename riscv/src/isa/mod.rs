@@ -1,9 +1,11 @@
 pub mod formats;
 pub mod opcodes;
 pub mod priv_mode;
+pub mod pte;
 
 pub use formats::*;
 pub use priv_mode::*;
+pub use pte::*;
 
 pub const INSTRUCTION_SIZE: u8 = 4;
 

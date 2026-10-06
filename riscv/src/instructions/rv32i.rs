@@ -1,6 +1,7 @@
 use crate::{
     cpu::Cpu,
     isa::Instr,
+    mmu::AccessType,
     trap::{Exception, Trap},
 };
 
@@ -298,7 +299,7 @@ pub fn exec_load(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
         0b000 => {
             // LB (Load Byte, sign-extended)
             let addr = cpu.reg_file.read(i.rs1()).wrapping_add(i.imm() as u32);
-            let phys_addr = cpu.translate(addr)?;
+            let phys_addr = cpu.translate(addr, AccessType::Load)?;
             let byte = cpu.bus.load(phys_addr, 1)? as u8;
             let value = (byte as i8) as i32;
             cpu.reg_file.write(i.rd(), value as u32);
@@ -307,7 +308,7 @@ pub fn exec_load(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
         0b001 => {
             // LH (Load Half, sign-extended)
             let addr = cpu.reg_file.read(i.rs1()).wrapping_add(i.imm() as u32);
-            let phys_addr = cpu.translate(addr)?;
+            let phys_addr = cpu.translate(addr, AccessType::Load)?;
             let halfword = cpu.bus.load(phys_addr, 2)? as u16;
             let value = (halfword as i16) as i32;
             cpu.reg_file.write(i.rd(), value as u32);
@@ -316,7 +317,7 @@ pub fn exec_load(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
         0b010 => {
             // LW (Load Word)
             let addr = cpu.reg_file.read(i.rs1()).wrapping_add(i.imm() as u32);
-            let phys_addr = cpu.translate(addr)?;
+            let phys_addr = cpu.translate(addr, AccessType::Load)?;
             let word = cpu.bus.load(phys_addr, 4)? as u32;
             cpu.reg_file.write(i.rd(), word);
             Ok(())
@@ -324,7 +325,7 @@ pub fn exec_load(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
         0b100 => {
             // LBU (Load Byte Unsigned, zero-extended)
             let addr = cpu.reg_file.read(i.rs1()).wrapping_add(i.imm() as u32);
-            let phys_addr = cpu.translate(addr)?;
+            let phys_addr = cpu.translate(addr, AccessType::Load)?;
             let byte = cpu.bus.load(phys_addr, 1)? as u8;
             let value = byte as u32;
             cpu.reg_file.write(i.rd(), value);
@@ -333,7 +334,7 @@ pub fn exec_load(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
         0b101 => {
             // LHU (Load Half Unsigned, zero-extended)
             let addr = cpu.reg_file.read(i.rs1()).wrapping_add(i.imm() as u32);
-            let phys_addr = cpu.translate(addr)?;
+            let phys_addr = cpu.translate(addr, AccessType::Load)?;
             let halfword = cpu.bus.load(phys_addr, 2)? as u16;
             let value = halfword as u32;
             cpu.reg_file.write(i.rd(), value);
@@ -351,7 +352,7 @@ pub fn exec_store(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
             // SB
             let addr = cpu.reg_file.read(s.rs1()).wrapping_add(s.imm() as u32);
             let data = (cpu.reg_file.read(s.rs2()) & 0xff) as u8;
-            let phys_addr = cpu.translate(addr)?;
+            let phys_addr = cpu.translate(addr, AccessType::Store)?;
             cpu.bus.store(phys_addr, 1, data as u32)?;
             Ok(())
         }
@@ -359,7 +360,7 @@ pub fn exec_store(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
             // SH
             let addr = cpu.reg_file.read(s.rs1()).wrapping_add(s.imm() as u32);
             let data = (cpu.reg_file.read(s.rs2()) & 0xffff) as u16;
-            let phys_addr = cpu.translate(addr)?;
+            let phys_addr = cpu.translate(addr, AccessType::Store)?;
             cpu.bus.store(phys_addr, 2, data as u32)?;
             Ok(())
         }
@@ -367,7 +368,7 @@ pub fn exec_store(cpu: &mut Cpu, instr: Instr) -> Result<(), Trap> {
             // SW
             let addr = cpu.reg_file.read(s.rs1()).wrapping_add(s.imm() as u32);
             let data = cpu.reg_file.read(s.rs2());
-            let phys_addr = cpu.translate(addr)?;
+            let phys_addr = cpu.translate(addr, AccessType::Store)?;
             cpu.bus.store(phys_addr, 4, data)?;
             Ok(())
         }

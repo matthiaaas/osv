@@ -30,6 +30,8 @@ fn trap_handler(mut trapframe TrapFrame) {
 			kernel.dispatcher.switch_to(mut next_process)
 		}
 		.terminate_curr {
+			kernel.scheduler.zombify(mut curr_process)
+
 			mut next_process := kernel.scheduler.pick_next() or {
 				panic('No ready/runnable process after trap')
 			}

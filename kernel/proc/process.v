@@ -4,10 +4,6 @@ import riscv
 import memory { Pagetable, VirtAddr, map_kernel_regions }
 import loader { ProgramLoader }
 
-const max_file_descriptors = 4
-
-type FileDescriptor = u8
-
 pub enum ProcessState {
 	unused
 	ready
@@ -23,7 +19,7 @@ pub mut:
 	state            ProcessState
 	pagetable        Pagetable
 	trapframe        TrapFrame
-	file_descriptors [max_file_descriptors]FileDescriptor
+	file_descriptors FileDescriptorTable
 	kernel_stack_top u32
 	parent_pid       ?u32
 	exit_status      ?int
@@ -43,6 +39,7 @@ pub fn Process.new(pid u32,
 			epc: program_counter
 			sp:  stack_top
 		}
+		file_descriptors: FileDescriptorTable.new()
 		kernel_stack_top: kernel_stack_top
 		parent_pid:       parent_pid
 		exit_status:      none
@@ -54,10 +51,14 @@ pub fn Process.bootstrap(pid u32, l ProgramLoader) !Process {
 
 	loaded_program := l.load(mut pagetable)!
 
-	kernel_stack_frame := kernel.frame_allocator.allocate() or {
+	// TODO: allocate contiguous frames in a single safe call OR even better: stop identity mapping all kernel regions
+	kernel_stack_frame_1 := kernel.frame_allocator.allocate() or {
 		return error('Failed to allocate kernel stack frame')
 	}
-	kernel_stack_top := u32(kernel_stack_frame) + riscv.page_size
+	kernel_stack_frame_2 := kernel.frame_allocator.allocate() or {
+		return error('Failed to allocate kernel stack frame')
+	}
+	kernel_stack_top := u32(kernel_stack_frame_1) + riscv.page_size
 	map_kernel_regions(pagetable) or { return error('Failed to map kernel') }
 
 	return Process.new(pid, pagetable, loaded_program.entry, loaded_program.stack_top,

@@ -1,6 +1,7 @@
 module trap
 
-import proc { Process }
+import file { SeekFrom }
+import proc { LocalFileDescriptor, Process }
 
 pub const sys_getpid = u32(172)
 pub const sys_clone = u32(220) // fork etc.
@@ -27,11 +28,21 @@ pub fn handle_syscall(sysno u32, mut curr_process Process) !TrapDisposition {
 			return .reschedule
 		}
 		sys_exit {
-			kernel.scheduler.zombify(mut curr_process, int(curr_process.trapframe.a0))
+			curr_process.exit_status = int(curr_process.trapframe.a0)
 			return .terminate_curr
 		}
 		sys_yield {
 			curr_process.trapframe.a0 = 0
+			return .reschedule
+		}
+		sys_clone {
+			mut child_process := kernel.scheduler.fork(mut curr_process) or {
+				return error('Failed to fork: ${err}')
+			}
+			child_process.trapframe.a0 = 0
+			child_process.trapframe.epc += 4
+			curr_process.trapframe.a0 = child_process.pid
+			kernel.scheduler.enqueue(child_process)
 			return .reschedule
 		}
 		sys_openat {
@@ -40,12 +51,13 @@ pub fn handle_syscall(sysno u32, mut curr_process Process) !TrapDisposition {
 			mode := curr_process.trapframe.a3
 
 			vnode := kernel.vfs.resolve(path) or { return error('Failed to resolve path: ${err}') }
-
 			gft_fd := kernel.global_file_table.add(vnode, 0) or {
 				return error('Failed to add open file: ${err}')
 			}
-			curr_process.file_descriptors[0] = gft_fd
-
+			fd := curr_process.file_descriptors.allocate(gft_fd) or {
+				return error('Failed to allocate file descriptor: ${err}')
+			}
+			curr_process.trapframe.a0 = fd
 			return .reschedule
 		}
 		sys_read {
@@ -53,7 +65,10 @@ pub fn handle_syscall(sysno u32, mut curr_process Process) !TrapDisposition {
 			buf_ptr := unsafe { byteptr(curr_process.trapframe.a1) }
 			len := u32(curr_process.trapframe.a2)
 
-			mut open_file := kernel.global_file_table.at(curr_process.file_descriptors[fd]) or {
+			gft_fd := curr_process.file_descriptors.at(fd) or {
+				return error('Failed to get local file descriptor: ${err}')
+			}
+			mut open_file := kernel.global_file_table.at(gft_fd) or {
 				return error('Failed to get open file: ${err}')
 			}
 			open_file.read(buf_ptr, len) or {
@@ -67,7 +82,10 @@ pub fn handle_syscall(sysno u32, mut curr_process Process) !TrapDisposition {
 			buf_ptr := unsafe { byteptr(curr_process.trapframe.a1) }
 			len := u32(curr_process.trapframe.a2)
 
-			mut open_file := kernel.global_file_table.at(curr_process.file_descriptors[fd]) or {
+			gft_fd := curr_process.file_descriptors.at(fd) or {
+				return error('Failed to get local file descriptor: ${err}')
+			}
+			mut open_file := kernel.global_file_table.at(gft_fd) or {
 				return error('Failed to get open file: ${err}')
 			}
 			open_file.write(buf_ptr, len) or {
@@ -81,18 +99,30 @@ pub fn handle_syscall(sysno u32, mut curr_process Process) !TrapDisposition {
 			offset := u32(curr_process.trapframe.a1)
 			whence := u32(curr_process.trapframe.a2)
 
-			mut open_file := kernel.global_file_table.at(curr_process.file_descriptors[fd]) or {
+			gft_fd := curr_process.file_descriptors.at(fd) or {
+				return error('Failed to get local file descriptor: ${err}')
+			}
+			mut open_file := kernel.global_file_table.at(gft_fd) or {
 				return error('Failed to get open file: ${err}')
 			}
-			open_file.lseek(offset, whence) or { return error('Failed to lseek open file: ${err}') }
+			seek_from := SeekFrom.from2(whence) or { return error('Invalid whence') }
+			open_file.lseek(offset, seek_from) or {
+				return error('Failed to lseek open file: ${err}')
+			}
+			curr_process.trapframe.a0 = open_file.position
 			return .reschedule
 		}
 		sys_close {
-			fd := u32(curr_process.trapframe.a0)
-			kernel.global_file_table.close(curr_process.file_descriptors[fd]) or {
-				return error('Failed to close open file: ${err}')
+			fd := LocalFileDescriptor(u8(curr_process.trapframe.a0))
+			gft_fd := curr_process.file_descriptors.at(fd) or {
+				return error('Failed to get local file descriptor: ${err}')
 			}
-			curr_process.file_descriptors[fd] = 0
+			kernel.global_file_table.release(gft_fd) or {
+				return error('Failed to release open file for local file descriptor ${fd}: ${err}')
+			}
+			curr_process.file_descriptors.release(fd) or {
+				return error('Failed to release local file descriptor: ${err}')
+			}
 			return .reschedule
 		}
 		else {
